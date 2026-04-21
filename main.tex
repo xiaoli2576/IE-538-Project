@@ -1,14 +1,264 @@
-\documentclass{article}
-\usepackage{graphicx} % Required for inserting images
+\documentclass[11pt]{article}
 
-\title{IE 538 Project}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{array}
+
+\title{Static Multi-Trip Routing and Inter-Trip Charging\\with Multi-Station Choice}
 \author{Xiao Li}
 \date{April 2026}
 
 \begin{document}
-
 \maketitle
 
-\section{Introduction}
+\begin{abstract}
+This project studies a static electric transit routing problem in which a vehicle may serve passenger requests over multiple trips and recharge only between trips. The main modeling focus is the charging process. Instead of assuming a constant charging rate, we compare a linear charging model with a nonlinear tapering charging model approximated by piecewise-linear segments. We build an integrated mixed-integer optimization model that jointly decides request assignment, trip routing, inter-trip charging, charging-station selection, and the choice of initial dispatch station. Computational results on synthetic instances show that the charging assumption can materially change the number of requests served, the required charging time, and the total objective value. In the partial-recharge scenario, the linear model commits to an overly conservative plan that drops one request; the nonlinear model, exploiting the fast early portion of the tapering curve, serves all four. In the deep-recharge scenario, both models converge to the same plan because neither can afford a deep-and-slow recharge. These findings suggest that charging realism changes both the operational recommendation and the number of profitable trips, and that its effect is state-dependent rather than monotone.
+\end{abstract}
+
+\section{Problem Statement}
+
+We consider a static multi-trip electric transit problem over a finite planning horizon. A vehicle must decide which passenger requests to serve, how to sequence pickup and dropoff nodes within each trip, and how much to recharge between trips. Charging is allowed only between trips. The objective is to maximize operational profit, which includes service revenue, unserved-request penalties, trip and vehicle usage costs, routing cost, and charging cost.
+
+The project is motivated by the observation that constant-rate charging is often too optimistic. Real charging usually follows a tapering pattern: charging is faster in the early stage and slower as the battery state increases. Because charging, routing, and time windows are tightly coupled, using an oversimplified charging model can lead to incorrect operational plans.
+
+\section{Main Contributions}
+
+The main contributions of the current implementation are:
+\begin{enumerate}
+    \item An integrated optimization model that jointly decides routing, trip formation, battery propagation, and inter-trip charging.
+    \item A multi-station charging extension, where the model chooses which charging station to use between trips \emph{and} which station to dispatch from at the start of the planning horizon.
+    \item Station-dependent charging speed and charging cost, so the model can trade off travel distance, charging speed, and charging expense.
+    \item A tractable nonlinear charging approximation using a piecewise-linear tapering curve, guarded by indicator constraints so the piecewise model only participates when a station is actually selected.
+    \item A formulation with per-constraint tightened big-$M$ coefficients, hierarchical multi-objective (profit primary, total ready/end time secondary), and lex-order symmetry breaking across identical buses.
+    \item A cross-evaluation experiment: optimize under one charging assumption and test the same discrete plan under another charging assumption.
+\end{enumerate}
+
+The last point is especially important. It lets us test not only whether the two models give different objective values, but also whether a plan obtained under a simplified charging assumption is still operationally valid under a more realistic charging process.
+
+\section{Modeling Approach}
+
+\subsection{Core Decision Structure}
+
+The model includes:
+\begin{itemize}
+    \item binary request-service decisions;
+    \item binary request-to-trip assignment decisions;
+    \item binary routing-arc decisions within each trip;
+    \item trip activation variables;
+    \item pickup and dropoff timing variables;
+    \item passenger load propagation variables;
+    \item battery level variables within and across trips;
+    \item charging-station selection variables between consecutive trips;
+    \item charging time and charging energy variables.
+\end{itemize}
+
+\subsection{Charging Representation}
+
+We compare two charging assumptions:
+\begin{itemize}
+    \item \textbf{Linear charging:} charged energy grows at a constant rate with charging time.
+    \item \textbf{Nonlinear charging:} charged energy follows a tapering piecewise-linear function, representing fast early charging and slower late charging.
+\end{itemize}
+
+This project does \textbf{not} directly keep the bilinear form $E = p\,\theta$ from the original proposal. Instead, it uses a piecewise-linear mapping from charging time to charged energy. This choice keeps the integrated model computationally tractable while still capturing the operational impact of nonlinear charging.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/charging_profiles.png}
+    \caption{Charging curves used in the computational study. The nonlinear profile is a tapering piecewise-linear approximation, and station-specific curves are obtained by scaling charging time to reflect faster or slower stations.}
+    \label{fig:charging-profiles}
+\end{figure}
+
+\subsection{Charging Stations}
+
+The current model includes multiple charging stations. Each station has:
+\begin{itemize}
+    \item its own location;
+    \item its own charging-time scaling factor;
+    \item its own charging cost.
+\end{itemize}
+
+As a result, the optimization can decide not only how much to recharge, but also \textbf{where} to recharge.
+
+\section{Experimental Design}
+
+Because the currently available Gurobi license is size-limited, we use small synthetic instances designed to isolate the effect of charging behavior. The default experiments use:
+\begin{itemize}
+    \item 1 bus;
+    \item up to 2 trip slots;
+    \item 2 charging stations;
+    \item synthetic travel times and energy consumption;
+    \item scenario-specific time windows.
+\end{itemize}
+
+We evaluate three representative scenarios.
+
+\subsection*{Baseline}
+A loose instance in which both charging models can serve all requests. This is used as a sanity check.
+
+\subsection*{Partial Recharge}
+A tighter 4-request instance in which a moderate recharge is sufficient. This scenario is designed to test whether nonlinear charging can be advantageous when the vehicle mainly charges in the fast portion of the tapering curve.
+
+\subsection*{Deep Recharge}
+A tighter 5-request instance in which serving a more ambitious second trip requires significantly more charging energy. This scenario is designed to test whether linear charging can become overly optimistic when a deeper recharge is required. The original proposal targeted 6 requests here; after the recent model refinements (initial-station decision variable and link/indicator constraints) that size no longer fits within the size-limited Gurobi license, so we scaled to 5.
+
+\section{Computational Results}
+
+\subsection{Direct Comparison}
+
+The main direct-comparison results are summarized in Table~\ref{tab:direct-comparison}.
+
+\begin{table}[h]
+    \centering
+    \small
+    \begin{tabular}{lrlrrrrr}
+        \toprule
+        Scenario & Reqs & Mode & Objective & Served & Trips & Charge Time & Charge Energy \\
+        \midrule
+        Baseline          & 4 & Linear    & 202.98 & 4 & 2 & 6.95 & 10.17 \\
+        Baseline          & 4 & Nonlinear & 202.98 & 4 & 2 & 4.52 & 10.17 \\
+        Partial Recharge  & 4 & Linear    & 125.99 & 3 & 2 & 2.29 & 3.35  \\
+        Partial Recharge  & 4 & Nonlinear & 202.98 & 4 & 2 & 4.52 & 10.17 \\
+        Deep Recharge     & 5 & Linear    & 184.98 & 4 & 2 & 6.95 & 10.17 \\
+        Deep Recharge     & 5 & Nonlinear & 184.98 & 4 & 2 & 4.52 & 10.17 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Direct comparison of the linear and nonlinear charging assumptions across the three scenarios.}
+    \label{tab:direct-comparison}
+\end{table}
+
+These results lead to three observations.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/scenario_comparison.png}
+    \caption{Direct comparison of the linear and nonlinear charging models across the main scenarios. The baseline case is similar under both assumptions, while the partial-recharge case shows a large gap in both the number of served requests and the total objective.}
+    \label{fig:scenario-comparison}
+\end{figure}
+
+First, in the \textbf{baseline} case, both models serve all four requests and achieve the same objective (202.98). The nonlinear model reaches the same plan with noticeably less charging time (4.52 vs.\ 6.95), because it can charge in the fast early portion of the tapering curve rather than the flat-rate linear assumption. This is the expected sanity check: when charging is not the binding constraint, the two models agree on revenue but diverge on charging effort.
+
+Second, in the \textbf{partial recharge} case, nonlinear charging outperforms linear charging by \textbf{76.99} objective units. The linear model is too conservative: it believes that a second trip carrying three more requests requires too long at a constant charging rate, so it drops \texttt{r4} entirely and serves only three requests. The nonlinear model, knowing it can top up quickly in the early portion of the taper, packs the same four requests into two balanced trips and serves everyone.
+
+Third, in the \textbf{deep recharge} case, both models converge to the same objective (184.98) and the same served-request set (\texttt{r1}--\texttt{r4}, dropping \texttt{r5}). Even with linear charging, serving the extra 5th request would push the second trip into a deeper recharge that neither model finds profitable under the current cost parameters. This shows that the advantage of the linear model over the nonlinear one, which was expected here, is not automatic --- it depends on the margin between extra revenue and extra charging cost.
+
+\subsection{Structural Changes in the Optimal Plans}
+
+The charging assumption changes more than the objective value. It also changes the discrete operational plan.
+
+In the \textbf{partial recharge} scenario:
+\begin{itemize}
+    \item the linear model serves \texttt{r1, r2} in Trip 1 and \texttt{r3} alone in Trip 2, dropping \texttt{r4};
+    \item the nonlinear model serves \texttt{r1, r2} in Trip 1 and \texttt{r3, r4} in Trip 2 (all four served).
+\end{itemize}
+
+In the \textbf{deep recharge} scenario, both models converge on the same grouping:
+\begin{itemize}
+    \item \texttt{r1, r2} in Trip 1, \texttt{r3, r4} in Trip 2 (both models), dropping \texttt{r5}.
+\end{itemize}
+
+Thus, the charging model changes \textbf{which requests are served}, not just the amount of charging. When the tapering curve helps (partial recharge), it helps by enabling one more request.
+
+\subsection{Charging-Station and Initial-Station Selection}
+
+The optimization actively selects a charging station between trips \emph{and} an initial dispatch station for the first trip. In the current best runs, the model repeatedly chooses the \texttt{depot} station for the initial dispatch and the \texttt{hub} station for the mid-plan recharge: the hub offers a favorable tradeoff between repositioning distance and charging speed once the bus is already near the passenger pickup cluster. This confirms that both station-choice layers are operationally used by the solver.
+
+\section{Cross-Evaluation Results}
+
+To test whether the simplified charging assumption is operationally misleading, we performed a cross-evaluation experiment:
+\begin{enumerate}
+    \item optimize the discrete plan under the \textbf{linear} charging assumption;
+    \item keep the routing, trip assignment, and charging-station choices fixed;
+    \item re-evaluate that same plan under the \textbf{nonlinear} charging model.
+\end{enumerate}
+
+\subsection{Partial-Recharge Cross-Evaluation}
+
+The linear-optimal plan is:
+\begin{itemize}
+    \item Trip 1: serve \texttt{r1, r2};
+    \item recharge at \texttt{hub} for 2.29 time units (3.35 kWh);
+    \item Trip 2: serve \texttt{r3} only (\texttt{r4} is dropped).
+\end{itemize}
+
+Under the linear model, this plan has objective \textbf{125.99}. When the same discrete plan is re-evaluated under the nonlinear charging model, it remains \textbf{feasible} at the same objective \textbf{125.99}: the same amount of energy is still purchased, and under the tapering curve it only takes 1.32 time units instead of 2.29 (charging happens in the fast early portion). However, the fixed discrete plan inherited from the linear optimization still ignores \texttt{r4}, so the revenue is left on the table.
+
+After full re-optimization under nonlinear charging, the solver instead chooses:
+\begin{itemize}
+    \item Trip 1: serve \texttt{r1, r2};
+    \item recharge at \texttt{hub} for 4.52 time units (10.17 kWh);
+    \item Trip 2: serve \texttt{r3, r4},
+\end{itemize}
+with objective \textbf{202.98} --- a \textbf{+76.99} gain over the plan inherited from the linear solution.
+
+This is a weaker but still meaningful result than the original proposal framing: the linear assumption does not merely produce a suboptimal plan, it produces a plan that \textbf{misses profitable requests} the nonlinear model can actually cover, because the linear model overestimates the time cost of the extra charging needed to reach \texttt{r4}. In the partial-recharge regime, the nonlinear model wins by exploiting cheap early charging, not by avoiding an infeasible commitment.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{figures/partial_recharge_cross_evaluation.png}
+    \caption{Cross-evaluation for the partial-recharge scenario. The linear-optimal discrete plan remains feasible under the nonlinear charging profile, but leaves \texttt{r4} unserved. Re-optimizing under nonlinear charging rebalances the trips and serves all four requests.}
+    \label{fig:partial-cross}
+\end{figure}
+
+\subsection{Deep-Recharge Cross-Evaluation}
+
+At $R=5$, the linear-optimal plan is:
+\begin{itemize}
+    \item Trip 1: serve \texttt{r1, r2};
+    \item recharge at \texttt{hub} for 6.95 time units (10.17 kWh);
+    \item Trip 2: serve \texttt{r3, r4} (dropping \texttt{r5}),
+\end{itemize}
+with objective \textbf{184.98}. When the same discrete plan is re-evaluated under nonlinear charging, it remains \textbf{feasible} at the same objective \textbf{184.98} (the same energy is acquired faster --- 4.52 instead of 6.95 time units). Fully re-optimizing under nonlinear charging does not improve the objective; neither model finds it worthwhile to attempt a third request in the second trip under the current cost parameters.
+
+This is an honest negative result for the deep-recharge story: at this instance size, the tapering vs.\ constant-rate distinction does not change operational behavior. The deep-recharge pathology --- linear plans overcommitting and then failing under nonlinear charging --- would require a larger and tighter instance (originally drafted at $R=6$) that exceeds the size-limited Gurobi license now that the model carries the additional initial-station decision variables.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{figures/deep_recharge_cross_evaluation.png}
+    \caption{Cross-evaluation for the deep-recharge scenario at $R=5$. Both the linear and nonlinear models converge to the same grouping and the same objective; the two assumptions differ only in the charging time required to acquire the same energy.}
+    \label{fig:deep-cross}
+\end{figure}
+
+\section{Why These Results Matter}
+
+The main insight of the project is not simply that linear and nonlinear charging can give different objective values. The more important conclusion is:
+\begin{quote}
+A simplified linear charging assumption can lead the planner to drop profitable requests it could have served under a realistic tapering charging profile. The two charging assumptions do not differ in feasibility at this instance size, but they differ in how many requests the operator decides to serve.
+\end{quote}
+
+This turns the nonlinear charging component from a modeling detail into an operationally meaningful factor: in the partial-recharge scenario, using the realistic tapering curve captured $+76.99$ objective units and one extra served request that the linear model had written off.
+
+The experiments also show that nonlinear charging does \textbf{not} always hurt performance. In the partial-recharge case, the tapering curve favors a plan that exploits fast early charging. In the deep-recharge case at $R=5$, both models converge --- the tapering curve has no ill effect because neither plan attempts a deep recharge. A sharper contrast would appear at $R=6$, which is not solvable under the current license now that the initial-station decision layer was added.
+
+Therefore, the effect of nonlinear charging is \textbf{state-dependent}:
+\begin{itemize}
+    \item if only a moderate recharge is needed, nonlinear charging enables a more aggressive service plan that the linear model would conservatively reject;
+    \item if a deep recharge is needed and neither model finds it profitable, the two assumptions agree --- and the linear model is safe to use;
+    \item if a deep recharge is needed and the linear model finds it profitable but the nonlinear model does not, the linear plan would overcommit (this regime is not reached in the current instance set).
+\end{itemize}
+
+\section{Limitations}
+
+The current implementation still has several limitations:
+\begin{enumerate}
+    \item The charging model uses a piecewise-linear approximation instead of the explicit bilinear form $E = p\,\theta$.
+    \item The test instances are synthetic rather than calibrated from real transit data or a published benchmark set.
+    \item The current experiments are intentionally small because of the size-limited Gurobi license.
+    \item Only a static planning setting is studied; the current code does not address dynamic or stochastic requests.
+\end{enumerate}
+These limitations are acceptable for a course project because they allow us to focus on formulation, implementation, and computational insight while keeping the model solvable.
+
+\section{Conclusion}
+
+This project develops a tractable optimization model for static multi-trip electric transit routing with inter-trip charging, multi-station charging choice, and initial-station dispatch choice. The model integrates routing, timing, battery evolution, charging decisions, and both charging-station selection and initial dispatch-station selection in a single framework. Nonlinear charging is modeled through a piecewise-linear tapering approximation guarded by indicator constraints.
+
+The computational study shows that charging realism matters. In loose cases (baseline) the two charging models produce the same plan and revenue but differ in charging effort. In tighter cases (partial recharge), the linear model is too conservative and drops a profitable request, while the nonlinear model exploits fast early charging to serve it, opening a $+76.99$ gap. In the deep-recharge regime at the instance size we can currently solve, both models agree, showing that the direction of the effect is state-dependent rather than monotone.
+
+Overall, the project demonstrates that nonlinear charging is not a cosmetic refinement. It can change which requests the operator chooses to serve, which makes it a meaningful modeling contribution in integrated electric transit optimization. The natural next step, once a larger Gurobi license is available, is to rerun deep-recharge at $R=6$ to complete the state-dependent story with both sides of the picture.
 
 \end{document}
