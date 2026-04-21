@@ -304,7 +304,7 @@ Constraint (35), \(E_{ksr}=p_{ksr}\theta_{ksr}\), is bilinear in two continuous 
 
 A more conservative relaxation -- McCormick envelopes -- would keep the problem MILP but yield only a convex outer approximation whose gap on tapering charging curves is driven by the largest product term, so solution quality is sensitive to the tightness of the battery-capacity bounds and the charging-time bounds used to build the envelope.
 
-The formulation we adopt takes a different route. The charging curve we want to capture is \emph{already} piecewise linear: a fast-charging segment near the low state of charge, followed by one or two slower segments once the battery approaches its cutoff. Rather than carrying the product \(p_{ksr}\theta_{ksr}\) with a free \(p_{ksr}\) and approximating it, we drop \(p_{ksr}\) entirely and model the relation directly through \(\mathrm{PWL}\bigl(\theta_{ksr}; \theta^{(1)}_s,\ldots,\theta^{(P)}_s; E^{(1)}_s,\ldots,E^{(P)}_s\bigr)\), encoded via Gurobi's \texttt{addGenConstrPWL}. For the segmented CC-CV-style curves we use, this representation is exact at the breakpoints and interpolates linearly between them; there is no approximation gap to the curve we chose to model. Linear charging corresponds to evenly spaced breakpoints with constant slope; nonlinear (tapering) charging uses concave, decreasing-slope breakpoints. Station differences are expressed by scaling the time axis of the breakpoints, so a ``hub'' station delivers the same energy in less time than a ``depot.'' Figure~\ref{fig:charging-profiles} shows both base curves and the three station-specific variants.
+The formulation we adopt takes a different route. Physically, the quantity \(p_{ksr}\) is not an independent control; for a given battery and charger it is pinned to the current state of charge by the battery management system, and published fast-charge profiles for lithium-ion EV batteries follow a CC-CV pattern whose energy-versus-time curve is well approximated by three to four affine segments \cite{yi2025charging, montoya2017electric}. Our model therefore keeps the \emph{physically observable} quantity -- the total energy \(E_{ksr}\) acquired as a function of time \(\theta_{ksr}\) -- and drops \(p_{ksr}\) entirely as a redundant intermediate variable. The resulting relation is encoded as \(\mathrm{PWL}\bigl(\theta_{ksr}; \theta^{(1)}_s,\ldots,\theta^{(P)}_s; E^{(1)}_s,\ldots,E^{(P)}_s\bigr)\) via Gurobi's \texttt{addGenConstrPWL}. On a segmented CC-CV-style curve this representation is exact at the breakpoints and interpolates linearly between them. Linear charging corresponds to evenly spaced breakpoints with constant slope; nonlinear (tapering) charging uses concave, decreasing-slope breakpoints. Station differences are expressed by scaling the time axis of the breakpoints, so a ``hub'' station delivers the same energy in less time than a ``depot.'' Figure~\ref{fig:charging-profiles} shows both base curves and the three station-specific variants.
 
 \begin{figure}[ht]
     \centering
@@ -366,14 +366,14 @@ In the \textbf{deep-recharge} case at \(R=5\), the two assumptions again agree o
 
 \subsection{Problem Size and Runtime}
 
-Table~\ref{tab:solver-stats} reports the size of the integrated MIP and the Gurobi runtime for each scenario and charging mode, after presolve but before branching. Model size is driven almost entirely by the arc variables \(x_{kijr}\) and the link variables \(\ell^{\text{last}}\), \(\ell^{\text{start}}\) -- both scale as \(|N|^{2}|R|\) with \(|N|=2|Q|\). The deep-recharge instance (\(R=5\)) therefore carries roughly 50\% more constraints than the \(R=4\) instances, and its runtime is about five times larger, still well under a second under Gurobi's default settings. The linear and nonlinear modes produce the same model size because the piecewise-linear charging relation has the same number of breakpoints on each curve; the runtime differences between modes are within noise.
+Table~\ref{tab:solver-stats} reports the size of the integrated MIP as Gurobi receives it, i.e.\ before presolve, and the Gurobi wall-clock runtime for each scenario and charging mode. Model size is driven almost entirely by the arc variables \(x_{kijr}\) and the link variables \(\ell^{\text{last}}\), \(\ell^{\text{start}}\), which scale as \(|N|^{2}|R|\) with \(|N|=2|Q|\) service nodes. Trip slots \(|R|\) are fixed at two throughout; the scale difference across scenarios comes from varying \(|Q|\). The deep-recharge instance (\(|Q|=5\)) therefore carries roughly 50\% more constraints than the \(|Q|=4\) instances, and its runtime is about five times larger, still well under a second under Gurobi's default settings. The linear and nonlinear modes produce the same model size because the piecewise-linear charging relation has the same number of breakpoints on each curve; the runtime differences between modes are within noise.
 
 \begin{table}[ht]
     \centering
     \small
     \begin{tabular}{lrlrrrrr}
         \toprule
-        Scenario & \(R\) & Mode & Constraints & Variables & Binary & Continuous & Runtime (s) \\
+        Scenario & \(|Q|\) & Mode & Constraints & Variables & Binary & Continuous & Runtime (s) \\
         \midrule
         Baseline         & 4 & Linear    & 1{,}068 & 296 & 227 & 69 & 0.12 \\
         Baseline         & 4 & Nonlinear & 1{,}068 & 296 & 227 & 69 & 0.14 \\
@@ -383,7 +383,7 @@ Table~\ref{tab:solver-stats} reports the size of the integrated MIP and the Guro
         Deep recharge    & 5 & Nonlinear & 1{,}523 & 403 & 322 & 81 & 0.66 \\
         \bottomrule
     \end{tabular}
-    \caption{Problem size and runtime for each scenario under both charging assumptions. Sizes are reported as Gurobi receives them, i.e.\ before presolve. Runtime is wall-clock seconds on Gurobi 11.0 with default parameters, a relative MIP gap target of \(0\), and a 120-second time limit that none of the instances hit.}
+    \caption{Problem size and runtime for each scenario under both charging assumptions. Sizes are reported as Gurobi receives the model, i.e.\ before presolve. Runtime is wall-clock seconds on Gurobi 11.0 with default parameters, a relative MIP gap target of \(0\), and a 120-second time limit that none of the instances hit.}
     \label{tab:solver-stats}
 \end{table}
 
