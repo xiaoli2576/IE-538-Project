@@ -67,6 +67,25 @@
   }\vskip2pt%
 }
 
+% --- Section divider: full-bleed black page with section title in gold ---
+\AtBeginSection[]{%
+  {%
+  \setbeamercolor{background canvas}{bg=PurdueBlack}%
+  \setbeamertemplate{footline}{}%
+  \begin{frame}[plain]
+    \vfill
+    \begin{tikzpicture}[remember picture,overlay]
+      \fill[PurdueGold] ([yshift=-3.8cm]current page.west) rectangle ([yshift=-3.4cm]current page.east);
+    \end{tikzpicture}
+    \begin{center}
+      {\scriptsize\color{PurdueGold}\textsc{Section \insertsectionnumber}}\\[6pt]
+      {\Huge\bfseries\color{PurdueGold}\insertsection}
+    \end{center}
+    \vfill
+  \end{frame}%
+  }%
+}
+
 % --- Title info ---
 \title{\textbf{Static Multi-Trip Routing \\ and Inter-Trip Charging \\ with Nonlinear Charging Profiles}}
 \subtitle{IE 538 Nonlinear Optimization --- Final Project}
@@ -107,6 +126,33 @@ with Nonlinear Charging Profiles}\\[12pt]
 \end{frame}
 }
 
+% ================= AGENDA =================
+\begin{frame}{Agenda}
+\vspace{6pt}
+\begin{columns}[T,onlytextwidth]
+\column{0.5\textwidth}
+\begin{enumerate}\itemsep5pt
+  \item \textbf{Motivation} \\
+        {\small\color{PurdueGray} Why charging realism is operationally important.}
+  \item \textbf{Problem Setup} \\
+        {\small\color{PurdueGray} Static multi-trip E-AFT with inter-trip charging.}
+  \item \textbf{Modeling Approach} \\
+        {\small\color{PurdueGray} One-stage MIP; PWL charging; indicator coupling.}
+\end{enumerate}
+\column{0.5\textwidth}
+\begin{enumerate}\itemsep5pt
+  \setcounter{enumi}{3}
+  \item \textbf{Experiments \& Results} \\
+        {\small\color{PurdueGray} Direct comparison + symmetric cross-evaluation.}
+  \item \textbf{Takeaways} \\
+        {\small\color{PurdueGray} When a simplified charging model becomes misleading.}
+  \item \textbf{Limitations \& Next Steps}
+\end{enumerate}
+\end{columns}
+\end{frame}
+
+\section{Motivation}
+
 % ================= MOTIVATION =================
 \begin{frame}{Why Nonlinear Charging Matters for E-AFT}
 \begin{columns}[T,onlytextwidth]
@@ -129,6 +175,60 @@ with Nonlinear Charging Profiles}\\[12pt]
 {\scriptsize Linear vs.\ tapering piecewise-linear charging curves.}
 \end{columns}
 \end{frame}
+
+\section{Problem Setup}
+
+% ================= PROBLEM SETUP =================
+\begin{frame}{E-AFT: The Operating Picture}
+\begin{columns}[T,onlytextwidth]
+\column{0.55\textwidth}
+\textbf{One planning horizon, one bus, multiple trips}
+\begin{itemize}\itemsep2pt
+  \item Pre-booked passenger requests: origin, destination, pickup time window, \# passengers.
+  \item Each trip: a sequence of pickup / drop-off visits, subject to capacity and time windows.
+  \item Between consecutive trips: return to a charging station, partial recharge, re-dispatch.
+  \item Limited battery $\Rightarrow$ routing, timing, and charging are \emph{tightly coupled}.
+\end{itemize}
+
+\vspace{4pt}
+\textbf{Decisions (all jointly optimized)}
+\begin{itemize}\itemsep1pt
+  \item[$\bullet$] Which requests are served, by which trip.
+  \item[$\bullet$] Pickup / drop-off order inside each trip.
+  \item[$\bullet$] Initial dispatch station; inter-trip station choice.
+  \item[$\bullet$] Charging duration \& acquired energy at each station visit.
+\end{itemize}
+
+\column{0.43\textwidth}
+\centering
+\includegraphics[width=\linewidth]{Figure1.png}\\[4pt]
+{\scriptsize A bus cycles through trips of pickups \& drop-offs, returning to a charging station between trips.}
+\end{columns}
+\end{frame}
+
+% ================= RELATED WORK / POSITIONING =================
+\begin{frame}{Where This Project Sits}
+\centering\small
+\begin{tabular}{@{}p{0.27\textwidth} p{0.33\textwidth} p{0.33\textwidth}@{}}
+\toprule
+ & \textbf{Jiang et al.\ (2026)} & \textbf{This project} \\
+\midrule
+Problem scope          & Dynamic routing + charging & \textbf{Static} snapshot of the same problem \\[3pt]
+Solution method        & \emph{Two-stage} heuristic decomposition & \textbf{One-stage} integrated MIP \\[3pt]
+Charging rate          & \emph{Linear} (constant) & \textbf{Linear vs.\ nonlinear PWL} compared head-to-head \\[3pt]
+Station model          & Fixed depot only & Multi-station, per-station speed \emph{and} price \\[3pt]
+Dispatch station       & Fixed parameter & \textbf{Decision variable} for the first trip \\[3pt]
+Nonlinearity           & Avoided & $E=p\,\theta$ reformulated $\to$ PWL via \texttt{addGenConstrPWL} \\
+\bottomrule
+\end{tabular}
+
+\vspace{8pt}
+\begin{block}{Positioning}
+The project's scope is \emph{narrower} than Jiang et al.\ (static, small instances), but it extends their setting in the two directions that matter for a nonlinear-optimization course: \alert{charging-rate nonlinearity} and \alert{joint multi-station charging decisions}.
+\end{block}
+\end{frame}
+
+\section{Modeling Approach}
 
 % ================= CONTRIBUTIONS =================
 \begin{frame}{Contributions}
@@ -201,6 +301,8 @@ Station price (\$/kWh): \texttt{depot} 0.48, \texttt{hub} 0.64, \texttt{edge} 0.
 {\scriptsize Shared-knot PWL; station speed enters via the time-axis scale factor.}
 \end{columns}
 \end{frame}
+
+\section{Experiments \& Results}
 
 % ================= EXPERIMENTS =================
 \begin{frame}{Experimental Design}
@@ -388,6 +490,8 @@ A nonlinear-optimal plan \textbf{cannot be executed} under a linear charging ass
 \end{columns}
 \end{frame}
 
+\section{Takeaways}
+
 % ================= TAKEAWAY =================
 \begin{frame}{Main Takeaways}
 \begin{block}{Operational implication}
@@ -501,6 +605,88 @@ $\sum_s \sigma_{ks}=u_{k,1}$; link $\sigma_{ks}$ to the first-trip first node th
 $\mathrm{bus\_used}[k_i]\ge\mathrm{bus\_used}[k_{i+1}]$;\\
 $\min\sum_{k,r}(T^{\text{start}}_{kr}+T^{\text{end}}_{kr})$ as secondary objective.
 \end{columns}
+\end{frame}
+
+% ================= BACKUP: NOTATION =================
+\begin{frame}{Backup --- Key Notation}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+\column{0.48\textwidth}
+\textbf{Sets}
+\begin{tabular}{@{}ll@{}}
+$K$ & Buses, index $k$ \\
+$R$ & Trip slots per bus, index $r$ \\
+$Q$ & Requests, index $q$ \\
+$S$ & Charging stations, index $s$ \\
+$N = N^o \cup N^d$ & Pickup / drop-off nodes \\
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Binary decisions}
+\begin{tabular}{@{}ll@{}}
+$y_q$        & 1 if request $q$ served \\
+$y_{kqr}$    & 1 if bus $k$ serves $q$ in trip $r$ \\
+$u_{kr}$     & 1 if bus $k$ operates trip $r$ \\
+$x_{kijr}$   & 1 if arc $i\!\to\!j$ used \\
+$l^{\text{first}}_{kir},l^{\text{last}}_{kir}$ & First / last node of the trip \\
+$z_{ksr}$    & 1 if bus $k$ charges at $s$ between trips \\
+$\sigma_{ks}$& 1 if bus $k$ dispatches from station $s$ \\
+\end{tabular}
+
+\column{0.48\textwidth}
+\textbf{Continuous decisions}
+\begin{tabular}{@{}ll@{}}
+$a_{kir}$               & Arrival time at node \\
+$w_{kir}$               & Onboard load after node \\
+$L_{kir}$               & Battery level after node \\
+$L^{\text{start}}_{kr},L^{\text{end}}_{kr}$ & Battery at trip boundaries \\
+$T^{\text{start}}_{kr},T^{\text{end}}_{kr}$ & Trip start / end time \\
+$\theta_{ksr}$          & Charging duration \\
+$E_{ksr}$               & Acquired energy \\
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Parameters (highlights)}
+\begin{tabular}{@{}ll@{}}
+$C_m,C_z,C_e,C_d,C_v,C_t$ & Revenue / penalty / charge / travel / fleet / trip costs \\
+$\overline L,\underline L$  & Battery upper / lower bound \\
+$C_b$                     & Passenger capacity \\
+$t_{1,q},t_{2,q}$         & Pickup window for $q$ \\
+$\tau_{ij},e_{ij}$        & Travel time / energy $i\to j$ \\
+$\mathrm{PWL}_s(\cdot)$   & Station-$s$ charging curve \\
+\end{tabular}
+\end{columns}
+\end{frame}
+
+% ================= BACKUP: ANTICIPATED Q&A =================
+\begin{frame}{Backup --- Anticipated Questions}
+\small
+\begin{block}{Q1. Why not keep the bilinear $E = p\,\theta$?}
+Our implementation factors station-specific $p_s$ into the \emph{time-axis scaling} of a shared PWL curve. Gurobi's \texttt{addGenConstrPWL} then enforces $E = f_s(\theta)$ exactly on the approximation. This keeps the model MIP (not MINLP) while preserving the key nonlinear effect --- the tapering shape of the curve.
+\end{block}
+
+\begin{block}{Q2. Is the PWL approximation tight?}
+The taper uses 6 segments on $[0,32]$; slopes step from 2.08 down to 0.18 kWh/min, giving a piecewise upper envelope of a typical Li-ion SoC-vs-time curve. Finer grids are cheap (only one additional breakpoint per segment), but the course-size instance already terminates at MIP gap 0.
+\end{block}
+
+\begin{block}{Q3. Why does deep recharge at $R{=}5$ show no asymmetry?}
+At $R{=}5$ both models drop \texttt{r5} and share the same 2-trip plan with the same 10.17 kWh recharge --- time windows are loose enough that neither the 6.95 min (linear) nor the 4.52 min (nonlinear) recharge collides. The opposite asymmetry (linear over-commits) is expected at $R{=}6$, which exceeds our current Gurobi pip license.
+\end{block}
+\end{frame}
+
+\begin{frame}{Backup --- Anticipated Questions (cont.)}
+\small
+\begin{block}{Q4. Why pick the hub station when it charges pricier?}
+Hub costs \$0.64/kWh vs.\ depot \$0.48/kWh, but its time-scale factor is 0.82 (vs.\ depot's 1.08). In the partial-recharge regime the binding constraint is \emph{time} (r4's pickup window), not \emph{cost}, so the solver pays for speed.
+\end{block}
+
+\begin{block}{Q5. How do we know the cross-evaluation is not picking the wrong plan?}
+The discrete binaries ($u_{kr},\,x_{kijr},\,l^{\text{first/last}},\,z_{ksr}$) are extracted from the source solve and re-imposed as equality bounds in the target solve. Continuous variables (arrivals, battery levels, charge time / energy) are still free --- only the routing \& station choice is fixed.
+\end{block}
+
+\begin{block}{Q6. Can this scale?}
+Not directly. The model is a MIP with $O(|K||R|\,|N|^2)$ arc variables plus PWL constraints per $(k,s,r)$. A full-license experiment with \{multiple buses, 15+ requests\} would benefit from decomposition (e.g.\ column generation on trip patterns) or a rolling-horizon wrapper --- flagged as future work.
+\end{block}
 \end{frame}
 
 \end{document}
