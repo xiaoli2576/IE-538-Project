@@ -1,0 +1,42 @@
+{
+  "scenario": "partial_recharge",
+  "source_mode": "linear",
+  "target_mode": "nonlinear",
+  "optimized_source": {
+    "status": "OPTIMAL",
+    "objective_value": 125.99400000000044,
+    "served_requests": [
+      "r1",
+      "r2",
+      "r3"
+    ],
+    "trip_count": 2,
+    "total_charge_time": 2.2891666666662656,
+    "total_charge_energy": 3.35
+  },
+  "fixed_plan_in_target": {
+    "status": "OPTIMAL",
+    "objective_value": 125.994,
+    "served_requests": [
+      "r1",
+      "r2",
+      "r3"
+    ],
+    "trip_count": 2,
+    "total_charge_time": 1.320673076923054,
+    "total_charge_energy": 3.35
+  },
+  "optimized_target": {
+    "status": "OPTIMAL",
+    "objective_value": 202.98020000000005,
+    "served_requests": [
+      "r1",
+      "r2",
+      "r3",
+      "r4"
+    ],
+    "trip_count": 2,
+    "total_charge_time": 4.517320960356535,
+    "total_charge_energy": 10.169999999999959
+  }
+}

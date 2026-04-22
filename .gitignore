@@ -1,0 +1,30 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Gurobi LP dumps / solver artifacts
+*.lp
+*.mps
+*.sol
+*.ilp
+
+# LaTeX build
+*.aux
+*.log
+*.out
+*.toc
+*.nav
+*.snm
+*.vrb
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

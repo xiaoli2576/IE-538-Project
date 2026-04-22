@@ -1,0 +1,5 @@
+num_requests,num_buses,num_trip_slots,num_stations,time_limit,mip_gap,scenario,seed,mode,status,objective,served_count,served_requests,trip_count,runtime_seconds,total_charge_time,total_charge_energy
+4,1,2,2,30.0,0.0,baseline,7,linear,OPTIMAL,202.98020000000002,4,"r1,r2,r3,r4",2,0.13399982452392578,6.9495,10.169999999999998
+4,1,2,2,30.0,0.0,baseline,7,nonlinear,OPTIMAL,202.9802000000008,4,"r1,r2,r3,r4",2,0.127000093460083,4.517321428570519,10.169999999998796
+4,1,2,2,30.0,0.0,partial_recharge,7,linear,OPTIMAL,125.99400000000044,3,"r1,r2,r3",2,0.12199997901916504,2.2891666666662656,3.35
+4,1,2,2,30.0,0.0,partial_recharge,7,nonlinear,OPTIMAL,202.98020000000005,4,"r1,r2,r3,r4",2,0.06399989128112793,4.517320960356535,10.169999999999959
