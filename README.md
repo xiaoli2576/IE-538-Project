@@ -33,19 +33,20 @@ The code also includes a small Gurobi license fallback: if `C:\Users\23857\gurob
 
 ## Built-In Scenarios
 
-- `baseline`: the original loose toy instance
-- `partial_recharge`: a tighter 4-request case where nonlinear charging helps because a moderate recharge at the fast part of the taper is enough
-- `deep_recharge`: a tighter 6-request case where linear charging helps because the plan needs a much deeper recharge
+All three scenarios run on the same synthetic instance and differ only in the pickup time-window tightness imposed on a subset of the requests. Headline runs use 7 requests / 3 trip slots / 1 bus; a multi-bus robustness check at 8 requests / 2 trip slots / 2 buses is also reported.
+
+- `baseline`: all windows loose (~55 min wide); both charging models serve every request.
+- `partial_recharge`: `r3` and `r4` are squeezed to ~10-min windows. At R=7 both modes converge on the same 5-served plan; partial recharge is no longer the headline.
+- `deep_recharge`: `r3`, `r4`, `r5` are tightened back-to-back. At R=7, single bus, the linear model commits to a 35.81 kWh recharge and serves 5 requests at obj 165.51; the nonlinear model refuses that recharge, falls back to 4 served and obj 109.07. The 56.44 gap is the project's headline result, and cross-evaluation shows the linear plan is **infeasible** under the nonlinear curve.
 
 ## Run
 
 ```bash
 python run_model.py --charging-mode linear
 python run_model.py --scenario partial_recharge --charging-mode nonlinear
-python compare_modes.py --quiet
-python compare_modes.py --quiet --scenarios deep_recharge --requests 6
-python cross_evaluate.py --scenario partial_recharge --source-mode linear --target-mode nonlinear --quiet
-python cross_evaluate.py --scenario deep_recharge --source-mode linear --target-mode nonlinear --quiet --requests 6
+python compare_modes.py --quiet --scenarios baseline partial_recharge deep_recharge --requests 5 --time-limit 120
+python cross_evaluate.py --scenario partial_recharge --source-mode linear --target-mode nonlinear --quiet --requests 5
+python cross_evaluate.py --scenario deep_recharge --source-mode linear --target-mode nonlinear --quiet --requests 5
 python plot_results.py
 ```
 
@@ -68,14 +69,14 @@ Useful flags:
 
 ## Current Best Demo Runs
 
-- `python compare_modes.py --quiet`
-  This shows `baseline` and `partial_recharge` with the default small instance.
+- `python compare_modes.py --quiet --scenarios baseline partial_recharge deep_recharge --requests 7 --buses 1 --trips 3 --time-limit 300 --csv results/mode_comparison_r7_t3.csv`
+  Single-bus headline. Baseline serves 7/7 at 353.64. Partial recharge ties at 194.23. Deep recharge opens the headline 56.44 gap (linear 165.51 / 5 served vs nonlinear 109.07 / 4 served).
 
-- `python compare_modes.py --quiet --scenarios deep_recharge --requests 6`
-  This shows the deeper recharge case where linear charging can outperform nonlinear charging.
+- `python compare_modes.py --quiet --scenarios baseline partial_recharge deep_recharge --requests 8 --buses 2 --trips 2 --time-limit 300 --csv results/mode_comparison_r8_b2_t2.csv`
+  Multi-bus robustness check. Same pathology at smaller magnitude: deep recharge linear 300.22 vs nonlinear 293.98, gap 6.24, linear plan still infeasible under nonlinear.
 
-- `python cross_evaluate.py --scenario partial_recharge --source-mode linear --target-mode nonlinear --quiet`
-  In the current setup, the linear-optimal discrete plan becomes infeasible under nonlinear charging.
+- `python cross_evaluate.py --scenario deep_recharge --source-mode linear --target-mode nonlinear --quiet --requests 7 --trips 3`
+  Reproduces the central pathology: linear-optimal plan returns INFEASIBLE under the nonlinear curve.
 
-- `python cross_evaluate.py --scenario deep_recharge --source-mode linear --target-mode nonlinear --quiet --requests 6`
-  In the current setup, the linear-optimal deep-recharge plan also becomes infeasible under nonlinear charging.
+- `python plot_results.py`
+  Regenerates the six headline figures: `charging_profiles`, `scenario_comparison`, the two `*_cross_evaluation` panels, and the two `*_instance_map` spatial layouts.

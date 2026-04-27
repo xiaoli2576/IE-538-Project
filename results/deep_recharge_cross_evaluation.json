@@ -4,41 +4,37 @@
   "target_mode": "nonlinear",
   "optimized_source": {
     "status": "OPTIMAL",
-    "objective_value": 184.9802,
+    "objective_value": 165.50960000000032,
     "served_requests": [
       "r1",
       "r2",
       "r3",
-      "r4"
+      "r4",
+      "r7"
     ],
-    "trip_count": 2,
-    "total_charge_time": 6.949499999999988,
-    "total_charge_energy": 10.169999999999984
+    "trip_count": 3,
+    "total_charge_time": 24.470166666666266,
+    "total_charge_energy": 35.80999999999941
   },
   "fixed_plan_in_target": {
-    "status": "OPTIMAL",
-    "objective_value": 184.9802,
-    "served_requests": [
-      "r1",
-      "r2",
-      "r3",
-      "r4"
-    ],
-    "trip_count": 2,
-    "total_charge_time": 4.517321428571399,
-    "total_charge_energy": 10.169999999999959
+    "status": "INFEASIBLE",
+    "objective_value": null,
+    "served_requests": [],
+    "trip_count": 0,
+    "total_charge_time": 0,
+    "total_charge_energy": 0
   },
   "optimized_target": {
     "status": "OPTIMAL",
-    "objective_value": 184.98020111713294,
+    "objective_value": 109.06699999999998,
     "served_requests": [
       "r1",
       "r2",
-      "r3",
-      "r4"
+      "r4",
+      "r5"
     ],
-    "trip_count": 2,
-    "total_charge_time": 4.51732003215525,
-    "total_charge_energy": 10.169999999999515
+    "trip_count": 3,
+    "total_charge_time": 11.616666666666667,
+    "total_charge_energy": 23.0
   }
 }

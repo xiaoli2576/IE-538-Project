@@ -160,13 +160,13 @@ with Nonlinear Charging Profiles}\\[12pt]
 \textbf{Electrified Autonomous Flexible Transit (E-AFT)}
 \begin{itemize}\itemsep3pt
   \item Small batteries $\Rightarrow$ routing is charging-sensitive.
-  \item Existing work assumes \alert{constant charging rate} (Jiang et al., 2026).
+  \item Most prior work assumes a \alert{constant charging rate} (Jiang et al., 2026).
   \item Real Li-ion batteries \alert{taper}: fast at low SoC, slow at high SoC.
 \end{itemize}
 \vspace{4pt}
 \textbf{Research question}
 \begin{block}{}
-\emph{Does the charging-rate assumption change \textbf{which passenger requests} an operator chooses to serve --- not just how much charging is performed?}
+\emph{If the planner optimizes under a constant-rate assumption, will the resulting plan still be feasible once a real tapering battery has to execute it?}
 \end{block}
 \column{0.38\textwidth}
 \centering
@@ -306,15 +306,16 @@ Station price (\$/kWh): \texttt{depot} 0.48, \texttt{hub} 0.64, \texttt{edge} 0.
 
 % ================= EXPERIMENTS =================
 \begin{frame}{Experimental Design}
-\textbf{Setup.} 1 bus, up to 2 trip slots, 2 charging stations, synthetic requests.\\
+\textbf{Headline setup.} 1 bus, 3 trip slots, 2 charging stations, 7 synthetic requests.\\
+\textbf{Robustness setup.} 2 buses, 2 trip slots each, 8 requests (covered after the headline result).\\
 \textbf{Parameters.} Battery 36 kWh, min 4 kWh, initial 22 kWh, capacity 3 pax. Penalty \$18/unserved.
 
 \vspace{6pt}
-\begin{block}{Three diagnostic scenarios}
+\begin{block}{Three diagnostic scenarios (same 7-request instance, differ only in pickup window tightness)}
 \begin{tabular}{@{}p{0.19\textwidth}p{0.75\textwidth}@{}}
-\textbf{Baseline}       & 4 loose requests; both modes should match (sanity check). \\
-\textbf{Partial recharge} & 4 tight requests; a moderate recharge suffices $\Rightarrow$ stresses the fast early portion of the taper. \\
-\textbf{Deep recharge}  & 5 requests; the 5th targets a deeper recharge $\Rightarrow$ stresses the flat tail of the taper.
+\textbf{Baseline}       & all 7 windows loose ($\sim$55 min wide); both modes should serve all 7 (sanity check). \\
+\textbf{Partial recharge} & \texttt{r3,r4} squeezed to $\sim$10-min windows; a moderate recharge between trips fits the squeezed pair $\Rightarrow$ stresses the fast early portion of the taper. \\
+\textbf{Deep recharge}  & \texttt{r3,r4,r5} all squeezed back-to-back; the third trip needs a substantial inter-trip recharge $\Rightarrow$ stresses the slow tail of the taper.
 \end{tabular}
 \end{block}
 
@@ -322,129 +323,113 @@ Station price (\$/kWh): \texttt{depot} 0.48, \texttt{hub} 0.64, \texttt{edge} 0.
 \textbf{Two complementary experiments}
 \begin{itemize}\itemsep1pt
   \item \emph{Direct}: solve under each charging model independently.
-  \item \emph{Cross-evaluation}: optimize under source mode, fix the discrete plan, re-solve under target mode. Run \emph{both directions} (linear$\to$nonlinear and nonlinear$\to$linear).
+  \item \emph{Cross-evaluation}: optimize under linear, freeze the discrete plan (route, station, trip composition), re-solve under nonlinear, then re-optimize freely under nonlinear.
 \end{itemize}
 \end{frame}
 
 % ================= RESULTS TABLE =================
-\begin{frame}{Direct Comparison --- Headline Numbers}
+\begin{frame}{Direct Comparison --- Headline Numbers ($|Q|=7$, $|R|=3$)}
 \centering
 \small
-\begin{tabular}{@{}lcccrrc@{}}
+\begin{tabular}{@{}llrrrr@{}}
 \toprule
-\textbf{Scenario} & \textbf{R} & \textbf{Mode} & \textbf{Objective} & \textbf{Served} & \textbf{Charge (min / kWh)} \\
+\textbf{Scenario} & \textbf{Mode} & \textbf{Objective} & \textbf{Served} & \textbf{Trips} & \textbf{Charge (min / kWh)} \\
 \midrule
-Baseline          & 4 & Linear     & 202.98 & 4 & 6.95 / 10.17 \\
-Baseline          & 4 & Nonlinear  & 202.98 & 4 & 4.52 / 10.17 \\
+Baseline          & Linear     & 353.64 & 7 & 3 & 24.57 / 35.95 \\
+Baseline          & Nonlinear  & 353.64 & 7 & 3 & 41.27 / 35.95 \\
+Partial recharge  & Linear     & 194.23 & 5 & 3 & 17.15 / 25.10 \\
+Partial recharge  & Nonlinear  & 194.23 & 5 & 3 & 14.04 / 25.10 \\
 \rowcolor{PurdueGold!25}
-Partial recharge  & 4 & Linear     & 125.99 & 3 & 2.29 / \phantom{0}3.35 \\
+Deep recharge     & Linear     & \textbf{165.51} & \textbf{5} & 3 & 24.47 / 35.81 \\
 \rowcolor{PurdueGold!25}
-Partial recharge  & 4 & Nonlinear  & \textbf{202.98} & \textbf{4} & 4.52 / 10.17 \\
-Deep recharge     & 5 & Linear     & 184.98 & 4 & 6.95 / 10.17 \\
-Deep recharge     & 5 & Nonlinear  & 184.98 & 4 & 4.52 / 10.17 \\
+Deep recharge     & Nonlinear  & \textbf{109.07} & \textbf{4} & 3 & 11.62 / 23.00 \\
 \bottomrule
 \end{tabular}
 
 \vspace{10pt}
 \begin{columns}[T,onlytextwidth]
-\column{0.48\textwidth}
+\column{0.32\textwidth}
 \begin{block}{Baseline}
-Both modes serve all 4 requests. Nonlinear still charges faster (4.52 vs 6.95 min) for the \emph{same} 10.17 kWh.
+\small Both modes serve 7/7 at 353.64. Nonlinear charges \emph{longer} (41.27 vs 24.57 min) because the 35.95 kWh demand reaches the slow tail of the taper.
 \end{block}
-\column{0.48\textwidth}
-\begin{block}{Partial recharge --- the headline}
-Linear drops \texttt{r4}; nonlinear serves it. \alert{\textbf{+1 request served; +76.99 objective}}.
+\column{0.32\textwidth}
+\begin{block}{Partial recharge}
+\small Both modes settle on the same 5-served plan and the same 25.10 kWh recharge. Charging realism only changes the \emph{time}, not the served set.
+\end{block}
+\column{0.32\textwidth}
+\begin{block}{Deep recharge --- headline}
+\small Linear serves 5; nonlinear serves \alert{\textbf{4}}. \alert{\textbf{Gap = 56.44}}. Linear commits to 35.81 kWh; nonlinear refuses and falls back to 23.00 kWh.
 \end{block}
 \end{columns}
 \end{frame}
 
 % ================= MECHANISM (the core slide) =================
-\begin{frame}{Why Linear Drops \texttt{r4} --- the Arithmetic}
-\textbf{Partial-recharge time windows:} \texttt{r3}$\in[43,54]$, \texttt{r4}$\in[55,66]$. Hub time scale 0.82.
+\begin{frame}{Why the Two Models Disagree in Deep Recharge}
+\textbf{Time windows:} \texttt{r3}$\in[50,60]$, \texttt{r4}$\in[61,71]$, \texttt{r5}$\in[72,82]$, \texttt{r6}$\in[83,93]$. Hub time scale 0.82, depot 1.08.
 
-\vspace{4pt}
-\centering
-\begin{tikzpicture}[font=\scriptsize,x=0.17cm,y=0.42cm]
-% x axis: 1 time unit = 0.2 cm; so 0..72 -> 0..14.4 cm
-\draw[thick] (0,0) -- (72,0);
-\foreach \t in {0,10,20,30,40,50,60,70}{
-  \draw (\t,-0.1) -- (\t,0.1) node[below,yshift=-2pt] {\t};
-}
-\node[anchor=west,font=\scriptsize\bfseries] at (72,-0.25) {time};
-
-% r4 window [55,66] spanning both rows as a vertical band
-\fill[AccentRed!15] (55,0.4) rectangle (66,4.6);
-\draw[AccentRed,thick,dashed] (55,0.4) -- (55,4.6);
-\draw[AccentRed,thick,dashed] (66,0.4) -- (66,4.6);
-\node[text=AccentRed,font=\scriptsize\bfseries] at (60.5,5.0) {\texttt{r4} pickup window [55,66]};
-
-% LINEAR ACTUAL PLAN (y = 2.6): shallow 2.29 charge, trip 2 has r3 only, drops r4
-\node[anchor=east,font=\scriptsize\bfseries] at (-1,2.6) {Linear plan:};
-\fill[PurdueGold!85!PurdueBlack] (0,2.35) rectangle (38.94,2.85);
-\node[font=\scriptsize] at (19.5,2.6) {Trip 1 (\texttt{r1,r2}) end 38.94};
-\fill[PurdueGray] (38.94,2.35) rectangle (43.72,2.85);
-\fill[AccentRed!70] (43.72,2.35) rectangle (46.01,2.85);
-\node[white,font=\scriptsize\bfseries] at (44.9,2.6) {2.29};
-\fill[PurdueGold!50] (46.01,2.35) rectangle (72,2.85);
-\node[font=\scriptsize] at (59,2.6) {Trip 2 (\texttt{r3} only) --- \alert{drops \texttt{r4}}};
-
-% GHOST BAR: what linear WOULD need to serve r4 (6.95 min charge, trip 2 ready 50.67)
-\node[anchor=east,font=\scriptsize] at (-1,1.55) {if linear served \texttt{r4}:};
-\draw[PurdueGray,dashed] (43.72,1.35) rectangle (50.67,1.75);
-\node[font=\scriptsize\bfseries,text=AccentRed] at (47.2,1.55) {need charge 6.95 $\Rightarrow$ ready 50.67};
-
-% NONLINEAR PLAN (y = 4.2): 4.52 charge, trip 2 serves r3,r4
-\node[anchor=east,font=\scriptsize\bfseries] at (-1,4.2) {Nonlinear plan:};
-\fill[PurdueGold!85!PurdueBlack] (0,3.95) rectangle (38.94,4.45);
-\node[font=\scriptsize] at (19.5,4.2) {Trip 1 (\texttt{r1,r2}) end 38.94};
-\fill[PurdueGray] (38.94,3.95) rectangle (43.72,4.45);
-\fill[PurdueDarkGold] (43.72,3.95) rectangle (48.24,4.45);
-\node[white,font=\scriptsize\bfseries] at (46.0,4.2) {4.52};
-\fill[PurdueGold!50] (48.24,3.95) rectangle (72,4.45);
-\node[font=\scriptsize] at (60,4.2) {Trip 2 (\texttt{r3, r4}) ready 48.24};
-
-% drop-down guides onto r4 window
-\draw[dashed,AccentRed!80]            (50.67,1.35) -- (50.67,0.4);
-\draw[dashed,PurdueDarkGold!80!black] (48.24,3.95) -- (48.24,0.4);
-\end{tikzpicture}
-
-\vspace{2pt}
-\begin{itemize}\itemsep1pt
-  \item To serve \{\texttt{r3,r4}\} in Trip 2, Trip 2 needs 10.17 kWh at start.
-  \item At the \textbf{constant} hub rate, 10.17 kWh $=$ \alert{6.95 min} $\Rightarrow$ Trip 2 ready $\approx 50.67$ \alert{collides with \texttt{r4}'s [55,66] window after travel}.
-  \item Linear therefore \emph{retreats} to a 2.29 min / 3.35 kWh shallow recharge and \emph{drops} \texttt{r4}.
-  \item At the \textbf{tapering} rate, same 10.17 kWh $=$ \textbf{4.52 min} $\Rightarrow$ Trip 2 ready 48.24, \textbf{fits}.
-\end{itemize}
-\end{frame}
-
-% ================= CROSS EVAL =================
-\begin{frame}{Cross-Evaluation --- Symmetric Test}
+\vspace{6pt}
 \begin{columns}[T,onlytextwidth]
-\column{0.5\textwidth}
-\textbf{linear $\to$ nonlinear} (partial recharge)\\
-\scriptsize Optimize under linear, fix plan, re-evaluate under nonlinear.
+\column{0.49\textwidth}
+\begin{block}{Linear plan --- 5 served}
+\small
 \begin{itemize}\itemsep1pt
-  \item[\color{PurdueDarkGold}\textbullet] Fixed plan \textbf{remains feasible}: 125.99.
-  \item[\color{PurdueDarkGold}\textbullet] Charging finishes \emph{faster} (1.32 vs 2.29 min).
-  \item[\color{AccentRed}\textbullet] \textbf{Free re-optimization} under nonlinear $\Rightarrow$ 202.98 \alert{(+76.99, +1 served request)}.
+  \item Served: \{\texttt{r1, r2, r3, r4, r7}\}; drops \texttt{r5}, \texttt{r6}.
+  \item Total inter-trip recharge: \alert{24.47 min / 35.81 kWh}.
+  \item Constant rate: every minute of charging buys the same energy, so 24.47 min covers 35.81 kWh exactly.
+  \item Trip 3 is therefore ready in time to catch the late \texttt{r7}. \textbf{Obj 165.51}.
 \end{itemize}
+\end{block}
 
-\column{0.5\textwidth}
-\textbf{nonlinear $\to$ linear} (partial recharge)\\
-\scriptsize Optimize under nonlinear, fix plan, re-evaluate under linear.
+\column{0.49\textwidth}
+\begin{block}{Nonlinear plan --- 4 served}
+\small
 \begin{itemize}\itemsep1pt
-  \item[\color{AccentRed}\textbf{!}] Fixed plan is \alert{\textbf{INFEASIBLE}}.
-  \item[\color{PurdueDarkGold}\textbullet] Why: 10.17 kWh takes 6.95 min under linear, Trip 2 ready slips to 50.67, which (with the return+start legs) blows the \texttt{r4} pickup window.
-  \item[\color{PurdueDarkGold}\textbullet] Re-optimization must retreat to the 3-request plan (125.99).
+  \item Served: \{\texttt{r1, r2, r4, r5}\}; drops \texttt{r3}, \texttt{r6}, \texttt{r7}.
+  \item Total inter-trip recharge: \textbf{11.62 min / 23.00 kWh}.
+  \item On the tapering curve those same 24.47 minutes deliver only $\approx 31.55$ kWh -- a \alert{4.26 kWh shortfall}\ vs.\ the linear plan's 35.81 kWh budget (saved diagnostic).
+  \item Solver refuses the deep recharge; the late \texttt{r7} no longer fits. \textbf{Obj 109.07}.
 \end{itemize}
+\end{block}
 \end{columns}
 
 \vspace{6pt}
-\begin{block}{The symmetric headline}
-A nonlinear-optimal plan \textbf{cannot be executed} under a linear charging assumption --- it is not merely suboptimal, it violates the service time windows. Using a simplified linear model for planning therefore risks promising a plan the physical battery cannot deliver.
+\begin{block}{The structural takeaway}
+The two charging assumptions disagree on whether the third trip is feasible at all. Linear's plan is what an operator would dispatch if charging were really constant-rate. The next slide shows what happens when a real battery has to execute that plan.
+\end{block}
+\end{frame}
+
+% ================= CROSS EVAL =================
+\begin{frame}{Cross-Evaluation --- Linear's Plan Is Infeasible Under Nonlinear}
+\textbf{linear $\to$ nonlinear} (deep recharge, $|Q|=7$, $|R|=3$)\\
+\scriptsize Optimize under linear, fix the discrete plan (trip activations, routing arcs, station choice, first/last node indicators), re-evaluate under nonlinear.
+
+\vspace{6pt}
+\begin{columns}[T,onlytextwidth]
+\column{0.32\textwidth}
+\begin{block}{Linear (source)}
+\small Obj \textbf{165.51}\\
+5 served, 3 trips\\
+Recharge: 24.47 min / 35.81 kWh
+\end{block}
+\column{0.32\textwidth}
+\begin{block}{Fixed plan, nonlinear curve}
+\small \alert{\textbf{INFEASIBLE}}\\
+The 35.81 kWh cannot be delivered inside the inter-trip gap once the slow tail is enforced. Trip 3 starts after \texttt{r7}'s pickup window.
+\end{block}
+\column{0.32\textwidth}
+\begin{block}{Free nonlinear re-optimization}
+\small Obj \textbf{109.07}\\
+4 served, 3 trips\\
+Recharge: 11.62 min / 23.00 kWh
+\end{block}
+\end{columns}
+
+\vspace{6pt}
+\begin{block}{The honest headline}
+The 56.44 gap between the linear and the nonlinear optimum is not a tuning artefact. It is the gap between a plan that looks profitable on paper under a constant-rate assumption and a plan that the real battery can actually execute. The simplified charging model produces an \emph{unexecutable} commercial plan, not just a slower one.
 \end{block}
 
-\scriptsize Deep recharge ($R=5$): both modes converge on the same 2-trip / 4-served plan; asymmetry only appears once the taper actually binds (partial recharge regime).
+\scriptsize \textbf{Partial-recharge cross-evaluation:} the linear-optimal plan stays feasible at the same objective 194.23, with the nonlinear curve charging slightly faster on the early segment (14.04 vs 17.15 min). No subset swap at $|Q|=7$.
 \end{frame}
 
 % ================= FIGURES =================
@@ -454,39 +439,75 @@ A nonlinear-optimal plan \textbf{cannot be executed} under a linear charging ass
 \centering
 \includegraphics[width=\linewidth]{scenario_comparison.png}
 \\[2pt]
-{\scriptsize Direct comparison across three scenarios.}
+{\scriptsize Direct comparison: deep-recharge gap is the only one that opens.}
 
 \column{0.5\textwidth}
 \centering
-\includegraphics[width=\linewidth]{partial_recharge_cross_evaluation.png}
+\includegraphics[width=\linewidth]{deep_recharge_cross_evaluation.png}
 \\[2pt]
-{\scriptsize Partial-recharge cross-evaluation: linear plan $\to$ nonlinear.}
+{\scriptsize Deep-recharge cross-evaluation: middle column flagged \textsc{infeasible}.}
 \end{columns}
 \end{frame}
 
-% ================= STATION / DEEP RECHARGE =================
-\begin{frame}{Station Choice and the Deep-Recharge Regime}
+% ================= MULTI-BUS ROBUSTNESS =================
+\begin{frame}{Multi-Bus Robustness Check}
+\textbf{Concern.} Is the headline pathology a single-bus artefact?\\
+\textbf{Re-run.} 2 buses, 2 trip slots each, 8 requests, same Euclidean grid, same seed.
+
+\vspace{6pt}
+\centering\small
+\begin{tabular}{@{}lllcr@{}}
+\toprule
+\textbf{Scenario} & \textbf{Mode} & \textbf{Status} & \textbf{Obj.} & \textbf{Served} \\
+\midrule
+Baseline (multi-bus)         & Linear     & OPT & 305.64 & 7 \\
+Baseline (multi-bus)         & Nonlinear  & OPT & 305.64 & 7 \\
+Partial recharge (multi-bus) & Linear     & OPT & 305.64 & 7 \\
+Partial recharge (multi-bus) & Nonlinear  & OPT & 305.64 & 7 \\
+\rowcolor{PurdueGold!25}
+Deep recharge (multi-bus)    & Linear     & OPT & \textbf{300.22} & 7 \\
+\rowcolor{PurdueGold!25}
+Deep recharge (multi-bus)    & Nonlinear  & OPT & \textbf{293.98} & 7 \\
+\bottomrule
+\end{tabular}
+
+\vspace{8pt}
+\begin{columns}[T,onlytextwidth]
+\column{0.49\textwidth}
+\begin{block}{Same pathology, smaller gap}
+\small
+The deep-recharge linear plan sends bus~2 on a 18.18 kWh inter-trip recharge to fit a three-request second trip. \alert{\textbf{Cross-evaluation again returns INFEASIBLE.}} Free nonlinear re-optimization spreads load across the two buses for 6.24 less profit.
+\end{block}
+\column{0.49\textwidth}
+\begin{block}{What this tells us}
+\small
+The pathology is not a single-bus artefact. Both saved configurations (single bus / 3 trip slots, and 2 buses / 2 trip slots) show the same direction --- linear over-commits, nonlinear refuses, cross-eval is infeasible. The magnitude tracks how tight capacity is relative to demand.
+\end{block}
+\end{columns}
+\end{frame}
+
+% ================= STATION =================
+\begin{frame}{Station Choice}
 \begin{columns}[T,onlytextwidth]
 \column{0.55\textwidth}
-\textbf{Station selection is actively used}
+\textbf{Both station-choice layers bind}
 \begin{itemize}\itemsep2pt
-  \item Dispatch from \texttt{depot} (cheap, slower) for Trip 1.
-  \item Recharge at \texttt{hub} (fast, pricier) between trips --- the hub's short time scale is worth its higher \$/kWh because it unlocks tight time windows.
-  \item Confirms that both the \emph{initial-station} and \emph{mid-plan-station} decision layers bind on the optimum.
+  \item Dispatch from \texttt{depot} (\$0.48/kWh, time scale 1.08) for Trip~1.
+  \item Recharge at \texttt{hub} (\$0.64/kWh, time scale 0.82) between trips.
+  \item Hub's short time scale is worth its higher unit price because the binding constraint in deep recharge is \emph{time}, not \emph{cost}.
 \end{itemize}
 
-\textbf{Deep recharge at $R=5$: honest negative result}
+\textbf{Why this matters for the comparison}
 \begin{itemize}\itemsep2pt
-  \item Both modes serve \{\texttt{r1..r4}\}, drop \texttt{r5}, charge the same 10.17 kWh.
-  \item Objective drop $202.98 \to 184.98 = -18$ (exactly the unserved-request penalty).
-  \item The taper does \emph{not} always discriminate --- it discriminates \emph{only when} the constant-rate charge time is what creates the feasibility collision.
+  \item Linear and nonlinear pick the \emph{same} stations.
+  \item The 56.44 deep-recharge gap therefore isolates the charging-curve effect from station-choice noise.
 \end{itemize}
 
 \column{0.43\textwidth}
 \centering
-\includegraphics[width=\linewidth]{deep_recharge_cross_evaluation.png}
+\includegraphics[width=\linewidth]{deep_instance_map.png}
 \\[2pt]
-{\scriptsize Deep-recharge cross-evaluation.}
+{\scriptsize Deep-recharge spatial layout. Faded markers are dropped under nonlinear.}
 \end{columns}
 \end{frame}
 
@@ -495,16 +516,17 @@ A nonlinear-optimal plan \textbf{cannot be executed} under a linear charging ass
 % ================= TAKEAWAY =================
 \begin{frame}{Main Takeaways}
 \begin{block}{Operational implication}
-Charging realism is \textbf{state-dependent}, not monotone: the tapering assumption changes \emph{which} requests get served when, and only when, the constant-rate charge time would collide with a service time window.
+The linear charging assumption is safe when capacity is comfortable and \textbf{misleading when capacity is tight enough to force a deep recharge into the slow tail of the taper}. In that regime it produces a plan that the real battery cannot execute.
 \end{block}
 
 \vspace{4pt}
-\textbf{What we showed}
+\textbf{What the experiments showed}
 \begin{itemize}\itemsep2pt
-  \item A one-stage integrated MIP can handle multi-station charging, station-specific speed \& price, dispatch-station decisions, and a nonlinear charging profile --- \emph{without} the bilinear $E = p\,\theta$ term, by absorbing $p$ into a station-specific time-axis scaling of a shared PWL.
-  \item In partial recharge: \alert{nonlinear $\to$ +1 served request, +76.99 profit, while the linear-optimal plan remains feasible but leaves revenue on the table}.
-  \item Symmetric cross-evaluation: \alert{the nonlinear-optimal plan is \textbf{infeasible} under linear charging}. Using a simplified linear model risks producing a plan the battery cannot execute.
-  \item In deep recharge at $R=5$: both models agree --- negative-but-honest result.
+  \item A one-stage integrated MIP handles multi-station charging, station-specific speed \& price, dispatch-station decisions, and a tapering charging profile -- without the bilinear $E = p\,\theta$ term, by absorbing $p$ into a station-specific time-axis scaling of a shared PWL.
+  \item \textbf{Single-bus, $|Q|=7$, $|R|=3$, deep recharge.} Linear obj 165.51 (5 served) vs nonlinear 109.07 (4 served): \alert{\textbf{gap 56.44, and linear's plan is INFEASIBLE under nonlinear}}.
+  \item \textbf{Multi-bus, $|K|=2$, $|R|=2$, $|Q|=8$, deep recharge.} Same pathology, smaller magnitude: linear 300.22 vs nonlinear 293.98, \alert{\textbf{linear's plan still INFEASIBLE under nonlinear}}.
+  \item \textbf{Three buses, same instance.} The asymmetry collapses --- capacity is too loose for the deep-recharge regime to bind.
+  \item Baseline charges \emph{longer} under nonlinear (41.27 vs 24.57 min for 35.95 kWh) because the demand reaches the slow tail of the taper. Tapering charging is not uniformly faster.
 \end{itemize}
 \end{frame}
 
@@ -512,18 +534,18 @@ Charging realism is \textbf{state-dependent}, not monotone: the tapering assumpt
 \begin{frame}{Limitations \& Next Steps}
 \textbf{Limitations}
 \begin{itemize}\itemsep2pt
-  \item PWL approximation, not the explicit bilinear form (intentional tractability trade).
-  \item Synthetic instances; no calibration against a published benchmark.
-  \item Current Gurobi pip license forces small instances (1 bus, up to 5 requests).
+  \item PWL approximation, not the explicit bilinear form (intentional MIP-vs-MIQCP trade).
+  \item Synthetic instances; no calibration against a published transit benchmark.
+  \item Lex-order symmetry break across identical buses is sound but loose; tighter breaks would help the multi-bus runs.
   \item Static planning; no dynamic / stochastic requests.
 \end{itemize}
 
 \vspace{4pt}
 \textbf{Natural next steps}
 \begin{itemize}\itemsep2pt
-  \item Rerun deep recharge at $R=6$ once a full license is available --- this is where we expect the opposite asymmetry (linear-optimal overcommits under nonlinear) to finally materialize.
-  \item Stations-many-buses scaling with a decomposition or column-generation wrapper.
-  \item Sensitivity sweep on \{battery capacity, time-window width, station price ratio\}.
+  \item Sensitivity sweep across the boundary between the "tight" and "loose" capacity regimes (battery, time-window width, station price ratio).
+  \item Larger fleets with column generation on trip patterns.
+  \item Calibrate the PWL breakpoints against a published Li-ion taper before pitching the model as operationally usable.
 \end{itemize}
 \end{frame}
 
@@ -548,14 +570,14 @@ Charging realism is \textbf{state-dependent}, not monotone: the tapering assumpt
 \toprule
 \textbf{Item} & \textbf{Value} \\
 \midrule
-Solver & Gurobi 11 (pip license, restricted size) \\
+Solver & Gurobi 11 (academic license) \\
 Modelling API & \texttt{gurobipy} Python \\
 Charging PWL & \texttt{addGenConstrPWL} (general constraint) \\
 Station-off coupling & \texttt{addGenConstrIndicator} \\
 Multi-objective & Hierarchical: profit (prio 2) $\succ$ time (prio 1) \\
 Symmetry breaking & Lex-order on \texttt{bus\_used} and \texttt{trip\_active} \\
 \midrule
-Scenario runtime & 0.08--0.56 s per solve on a laptop CPU \\
+Scenario runtime & 1.8--3.9 s (single bus, $|Q|=7$); up to $\sim$60 s (multi-bus, $|Q|=8$) \\
 MIP gap at termination & 0 (solved to optimality) \\
 \bottomrule
 \end{tabular}
@@ -669,15 +691,15 @@ Our implementation factors station-specific $p_s$ into the \emph{time-axis scali
 The taper uses 6 segments on $[0,32]$; slopes step from 2.08 down to 0.18 kWh/min, giving a piecewise upper envelope of a typical Li-ion SoC-vs-time curve. Finer grids are cheap (only one additional breakpoint per segment), but the course-size instance already terminates at MIP gap 0.
 \end{block}
 
-\begin{block}{Q3. Why does deep recharge at $R{=}5$ show no asymmetry?}
-At $R{=}5$ both models drop \texttt{r5} and share the same 2-trip plan with the same 10.17 kWh recharge --- time windows are loose enough that neither the 6.95 min (linear) nor the 4.52 min (nonlinear) recharge collides. The opposite asymmetry (linear over-commits) is expected at $R{=}6$, which exceeds our current Gurobi pip license.
+\begin{block}{Q3. Why does the asymmetry only show up in deep recharge?}
+Deep recharge is the only scenario where the bus has to acquire enough energy in one inter-trip gap to reach the slow tail of the taper. In baseline and partial recharge the recharge per gap stays inside the early segment, where the constant-rate and tapering curves disagree only on time, not on whether the energy is acquired at all. The pathology is therefore specific to the regime where capacity is tight enough to push a single recharge into the tail.
 \end{block}
 \end{frame}
 
 \begin{frame}{Backup --- Anticipated Questions (cont.)}
 \small
 \begin{block}{Q4. Why pick the hub station when it charges pricier?}
-Hub costs \$0.64/kWh vs.\ depot \$0.48/kWh, but its time-scale factor is 0.82 (vs.\ depot's 1.08). In the partial-recharge regime the binding constraint is \emph{time} (r4's pickup window), not \emph{cost}, so the solver pays for speed.
+Hub costs \$0.64/kWh vs.\ depot \$0.48/kWh, but its time-scale factor is 0.82 (vs.\ depot's 1.08). In the partial-recharge regime the binding constraint is \emph{time} (the squeezed \texttt{r3} pickup window), not \emph{cost}, so the solver pays for speed.
 \end{block}
 
 \begin{block}{Q5. How do we know the cross-evaluation is not picking the wrong plan?}

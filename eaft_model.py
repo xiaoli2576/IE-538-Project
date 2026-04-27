@@ -185,6 +185,7 @@ class FixedBinaryPlan:
     first: Dict[Tuple[str, str, int], int]
     last: Dict[Tuple[str, str, int], int]
     arc: Dict[Tuple[str, str, str, int], int]
+    start_station_initial: Dict[Tuple[str, str], int]
 
 
 @dataclass(frozen=True)
@@ -309,6 +310,7 @@ def _extract_fixed_binary_plan(
     first: gp.tupledict,
     last: gp.tupledict,
     arc: gp.tupledict,
+    start_station_initial: gp.tupledict,
 ) -> FixedBinaryPlan:
     return FixedBinaryPlan(
         trip_active={
@@ -341,6 +343,11 @@ def _extract_fixed_binary_plan(
             for destination_id in node_ids
             for trip in trip_slots
         },
+        start_station_initial={
+            (bus_id, station): int(round(start_station_initial[bus_id, station].X))
+            for bus_id in buses
+            for station in stations
+        },
     )
 
 
@@ -351,6 +358,7 @@ def _apply_fixed_binary_plan(
     first: gp.tupledict,
     last: gp.tupledict,
     arc: gp.tupledict,
+    start_station_initial: gp.tupledict,
 ) -> None:
     for key, value in fixed_plan.trip_active.items():
         trip_active[key].LB = value
@@ -367,6 +375,9 @@ def _apply_fixed_binary_plan(
     for key, value in fixed_plan.arc.items():
         arc[key].LB = value
         arc[key].UB = value
+    for key, value in fixed_plan.start_station_initial.items():
+        start_station_initial[key].LB = value
+        start_station_initial[key].UB = value
 
 
 def generate_toy_instance(
@@ -725,6 +736,7 @@ def solve_instance(
             first,
             last,
             arc,
+            start_station_initial,
         )
 
     for request_id in requests:
@@ -1258,6 +1270,7 @@ def solve_instance(
         first,
         last,
         arc,
+        start_station_initial,
     )
 
     # C.13: record which initial station each bus chose
@@ -1328,13 +1341,30 @@ def cross_evaluate_modes(
     )
 
     target_instance = apply_charging_mode(instance, target_mode)
-    fixed_plan_in_target = solve_instance(
-        target_instance,
-        time_limit=time_limit,
-        mip_gap=mip_gap,
-        verbose=verbose,
-        fixed_plan=optimized_source.fixed_plan,
-    )
+    if optimized_source.fixed_plan is None:
+        # Source had no incumbent (infeasible / time-limit-no-solution). With no
+        # plan to fix, falling through would silently re-optimize the target and
+        # mislabel that result as a cross-evaluation. Surface the missing source
+        # plan as an explicit infeasible target stage instead.
+        fixed_plan_in_target = SolveResult(
+            status="NO_SOURCE_PLAN",
+            objective_value=None,
+            runtime_seconds=0.0,
+            mip_gap=None,
+            served_requests=[],
+            unserved_requests=list(target_instance.requests.keys()),
+            trips=[],
+            fixed_plan=None,
+            initial_station_chosen=None,
+        )
+    else:
+        fixed_plan_in_target = solve_instance(
+            target_instance,
+            time_limit=time_limit,
+            mip_gap=mip_gap,
+            verbose=verbose,
+            fixed_plan=optimized_source.fixed_plan,
+        )
     optimized_target = solve_instance(
         target_instance,
         time_limit=time_limit,

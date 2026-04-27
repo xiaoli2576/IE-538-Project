@@ -1,0 +1,226 @@
+{
+  "scenario": "deep_recharge",
+  "source_mode": "linear",
+  "target_mode": "nonlinear",
+  "seed": 7,
+  "optimized_source": {
+    "status": "OPTIMAL",
+    "objective_value": 300.2194000000001,
+    "runtime_seconds": 13.07699990272522,
+    "mip_gap": null,
+    "served_requests": [
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5",
+      "r6",
+      "r7"
+    ],
+    "unserved_requests": [
+      "r8"
+    ],
+    "trips": [
+      {
+        "bus_id": "bus_1",
+        "trip_index": 1,
+        "served_requests": [
+          "r1"
+        ],
+        "route": [
+          "r1_p",
+          "r1_d"
+        ],
+        "ready_time": 0.0,
+        "trip_end_time": 18.709999999999468,
+        "ready_battery": 22.0,
+        "battery_end": 14.93,
+        "charge_station_after_trip": "hub",
+        "charge_time_after_trip": 4.92683333333333,
+        "charge_energy_after_trip": 7.209999999999995
+      },
+      {
+        "bus_id": "bus_1",
+        "trip_index": 2,
+        "served_requests": [
+          "r3",
+          "r4"
+        ],
+        "route": [
+          "r3_p",
+          "r3_d",
+          "r4_p",
+          "r4_d"
+        ],
+        "ready_time": 34.47683333333206,
+        "trip_end_time": 69.65999999999997,
+        "ready_battery": 16.339999999999996,
+        "battery_end": 4.0,
+        "charge_station_after_trip": null,
+        "charge_time_after_trip": 0.0,
+        "charge_energy_after_trip": 0.0
+      },
+      {
+        "bus_id": "bus_2",
+        "trip_index": 1,
+        "served_requests": [
+          "r2"
+        ],
+        "route": [
+          "r2_p",
+          "r2_d"
+        ],
+        "ready_time": 0.0,
+        "trip_end_time": 38.940000000000055,
+        "ready_battery": 22.0,
+        "battery_end": 14.410000000000007,
+        "charge_station_after_trip": "hub",
+        "charge_time_after_trip": 12.422999999999991,
+        "charge_energy_after_trip": 18.17999999999999
+      },
+      {
+        "bus_id": "bus_2",
+        "trip_index": 2,
+        "served_requests": [
+          "r5",
+          "r6",
+          "r7"
+        ],
+        "route": [
+          "r5_p",
+          "r5_d",
+          "r6_p",
+          "r6_d",
+          "r7_p",
+          "r7_d"
+        ],
+        "ready_time": 56.14299999999931,
+        "trip_end_time": 138.53999999999996,
+        "ready_battery": 30.29,
+        "battery_end": 4.0,
+        "charge_station_after_trip": null,
+        "charge_time_after_trip": 0.0,
+        "charge_energy_after_trip": 0.0
+      }
+    ]
+  },
+  "fixed_plan_in_target": {
+    "status": "INFEASIBLE",
+    "objective_value": null,
+    "runtime_seconds": 0.004000186920166016,
+    "mip_gap": null,
+    "served_requests": [],
+    "unserved_requests": [
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5",
+      "r6",
+      "r7",
+      "r8"
+    ],
+    "trips": []
+  },
+  "optimized_target": {
+    "status": "OPTIMAL",
+    "objective_value": 293.97639902801393,
+    "runtime_seconds": 19.59599995613098,
+    "mip_gap": null,
+    "served_requests": [
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5",
+      "r6",
+      "r7"
+    ],
+    "unserved_requests": [
+      "r8"
+    ],
+    "trips": [
+      {
+        "bus_id": "bus_1",
+        "trip_index": 1,
+        "served_requests": [
+          "r1",
+          "r2"
+        ],
+        "route": [
+          "r1_p",
+          "r1_d",
+          "r2_p",
+          "r2_d"
+        ],
+        "ready_time": 0.0,
+        "trip_end_time": 38.93999999999397,
+        "ready_battery": 22.0,
+        "battery_end": 8.469999999999999,
+        "charge_station_after_trip": "hub",
+        "charge_time_after_trip": 8.295667205585996,
+        "charge_energy_after_trip": 13.97000039433122
+      },
+      {
+        "bus_id": "bus_1",
+        "trip_index": 2,
+        "served_requests": [
+          "r4",
+          "r5"
+        ],
+        "route": [
+          "r4_p",
+          "r4_d",
+          "r5_p",
+          "r5_d"
+        ],
+        "ready_time": 52.01566720557968,
+        "trip_end_time": 83.14544981855678,
+        "ready_battery": 20.140000394331217,
+        "battery_end": 4.0,
+        "charge_station_after_trip": null,
+        "charge_time_after_trip": 0.0,
+        "charge_energy_after_trip": 0.0
+      },
+      {
+        "bus_id": "bus_2",
+        "trip_index": 1,
+        "served_requests": [
+          "r3"
+        ],
+        "route": [
+          "r3_p",
+          "r3_d"
+        ],
+        "ready_time": 0.0,
+        "trip_end_time": 56.269999999992905,
+        "ready_battery": 22.0,
+        "battery_end": 16.480000000000175,
+        "charge_station_after_trip": "hub",
+        "charge_time_after_trip": 8.15899999999941,
+        "charge_energy_after_trip": 13.869999999999571
+      },
+      {
+        "bus_id": "bus_2",
+        "trip_index": 2,
+        "served_requests": [
+          "r6",
+          "r7"
+        ],
+        "route": [
+          "r6_p",
+          "r6_d",
+          "r7_p",
+          "r7_d"
+        ],
+        "ready_time": 70.1789999999916,
+        "trip_end_time": 138.53999999999996,
+        "ready_battery": 27.489999999999746,
+        "battery_end": 4.0,
+        "charge_station_after_trip": null,
+        "charge_time_after_trip": 0.0,
+        "charge_energy_after_trip": 0.0
+      }
+    ]
+  }
+}

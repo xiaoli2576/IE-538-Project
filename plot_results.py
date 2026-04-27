@@ -8,6 +8,7 @@ import warnings
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+from matplotlib.lines import Line2D
 import pandas as pd
 
 from eaft_model import cross_evaluate_modes, generate_toy_instance, CrossEvaluationResult
@@ -58,17 +59,15 @@ def _apply_style() -> None:
 
 def _scenario_label(raw: str) -> str:
     mapping = {
-        "baseline": "Baseline\n(4 requests)",
-        "partial_recharge": "Partial Recharge\n(4 requests)",
-        "deep_recharge": "Deep Recharge\n(5 requests)",
+        "baseline": "Baseline\n(7 requests)",
+        "partial_recharge": "Partial Recharge\n(7 requests)",
+        "deep_recharge": "Deep Recharge\n(7 requests)",
     }
     return mapping.get(raw, raw)
 
 
 def load_comparison_data() -> pd.DataFrame:
-    small = pd.read_csv(RESULTS_DIR / "mode_comparison_small.csv")
-    deep = pd.read_csv(RESULTS_DIR / "mode_comparison_deep.csv")
-    data = pd.concat([small, deep], ignore_index=True)
+    data = pd.read_csv(RESULTS_DIR / "mode_comparison_r7_t3.csv")
     data["scenario_label"] = data["scenario"].map(_scenario_label)
     return data
 
@@ -137,7 +136,7 @@ def plot_scenario_comparison(data: pd.DataFrame) -> Path:
     _apply_style()
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    scenario_order = ["Baseline\n(4 requests)", "Partial Recharge\n(4 requests)", "Deep Recharge\n(5 requests)"]
+    scenario_order = ["Baseline\n(7 requests)", "Partial Recharge\n(7 requests)", "Deep Recharge\n(7 requests)"]
     mode_order = ["linear", "nonlinear"]
     color_map = {"linear": LINEAR_COLOR, "nonlinear": NONLINEAR_COLOR}
     metric_specs = [
@@ -169,10 +168,12 @@ def plot_scenario_comparison(data: pd.DataFrame) -> Path:
                 alpha=0.93,
                 label=mode.title() if metric == "objective" else None,
             )
+            metric_max = max(subset[metric].fillna(0).max(), 1)
+            label_offset = 0.012 * metric_max
             for bar, val in zip(bars, subset[metric]):
                 ax.text(
                     bar.get_x() + bar.get_width() / 2,
-                    bar.get_height() + max(0.8, 0.02 * max(subset[metric].fillna(0).max(), 1)),
+                    bar.get_height() + label_offset,
                     f"{val:.2f}" if metric != "served_count" else f"{int(val)}",
                     ha="center",
                     va="bottom",
@@ -415,14 +416,20 @@ def _plan_segments(solve) -> List[Tuple[str, float, float, str]]:
         label = ", ".join(trip.served_requests) if trip.served_requests else f"trip {trip.trip_index}"
         segments.append((label, trip.ready_time, trip.trip_end_time - trip.ready_time, "serve"))
 
-        if trip.charge_station_after_trip and trip.charge_time_after_trip > 0:
-            # Charging block starts at trip_end (approximating the reposition inside the charge slab)
+        if (
+            trip.charge_station_after_trip
+            and trip.charge_time_after_trip > 0
+            and idx + 1 < len(solve.trips)
+        ):
+            # Charging block starts at trip_end and extends through reposition
+            # (so the visual block covers the full gap until the next trip is ready).
             start = trip.trip_end_time
+            reposition_time = max(0.0, solve.trips[idx + 1].ready_time - start - trip.charge_time_after_trip)
             segments.append(
                 (
                     f"{trip.charge_station_after_trip} +{trip.charge_energy_after_trip:.1f} kWh",
                     start,
-                    trip.charge_time_after_trip,
+                    trip.charge_time_after_trip + reposition_time,
                     "charge",
                 )
             )
@@ -455,7 +462,7 @@ def _draw_cross_panel(
         instance = generate_toy_instance(
             num_requests=requests,
             num_buses=1,
-            num_trip_slots=2,
+            num_trip_slots=3,
             num_stations=2,
             scenario=scenario,
             seed=7,
@@ -464,7 +471,7 @@ def _draw_cross_panel(
             instance,
             source_mode="linear",
             target_mode="nonlinear",
-            time_limit=30.0,
+            time_limit=300.0,
             mip_gap=0.0,
             verbose=False,
         )
@@ -589,7 +596,7 @@ def plot_partial_cross_evaluation(precomputed_result: Optional[CrossEvaluationRe
     return _draw_cross_panel(
         "Cross-Evaluation in the Partial-Recharge Scenario",
         scenario="partial_recharge",
-        requests=4,
+        requests=7,
         precomputed_result=precomputed_result,
     )
 
@@ -598,21 +605,21 @@ def plot_deep_cross_evaluation(precomputed_result: Optional[CrossEvaluationResul
     return _draw_cross_panel(
         "Cross-Evaluation in the Deep-Recharge Scenario",
         scenario="deep_recharge",
-        requests=5,
+        requests=7,
         precomputed_result=precomputed_result,
     )
 
 
-def _run_cross_evaluation(scenario: str, requests: int) -> CrossEvaluationResult:
+def _run_cross_evaluation(scenario: str, requests: int):
     """Solve the cross-evaluation MIPs for one scenario.
 
-    Called once per scenario in main() so plots can reuse the result without
-    re-solving.  Results are also written to results/<scenario>_cross_evaluation.json.
+    Returns ``(instance, result)`` so callers can also draw a spatial map.
+    Results are persisted to ``results/<scenario>_cross_evaluation.json``.
     """
     instance = generate_toy_instance(
         num_requests=requests,
         num_buses=1,
-        num_trip_slots=2,
+        num_trip_slots=3,
         num_stations=2,
         scenario=scenario,
         seed=7,
@@ -621,29 +628,132 @@ def _run_cross_evaluation(scenario: str, requests: int) -> CrossEvaluationResult
         instance,
         source_mode="linear",
         target_mode="nonlinear",
-        time_limit=30.0,
+        time_limit=300.0,
         mip_gap=0.0,
         verbose=False,
     )
-    # Persist raw numbers for the report
     _save_cross_evaluation_json(result, scenario)
-    return result
+    return instance, result
+
+
+def plot_instance_map(instance, result, name: str) -> Path:
+    """Draw a 2D spatial map: stations, pickups/dropoffs, and bus routes."""
+    _apply_style()
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    def draw_arrow_link(x1, y1, x2, y2, color, lw=2.0, zorder=2):
+        ax.plot([x1, x2], [y1, y2], linestyle="-", linewidth=lw, color=color, alpha=0.9, zorder=zorder)
+        ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
+                    arrowprops=dict(arrowstyle="->", color=color, lw=lw), zorder=zorder)
+
+    for station, coord in instance.station_coords.items():
+        x, y = coord
+        ax.scatter(x, y, marker="s", s=180, color="gold", edgecolor="black", zorder=5)
+        ax.text(x + 0.25, y + 0.25, f"{station}", fontsize=10, weight="bold", zorder=6)
+
+    for request_id, request in instance.requests.items():
+        px, py = request.pickup
+        dx, dy = request.dropoff
+        ax.scatter(px, py, marker="^", s=120, color="tab:blue", edgecolor="black", zorder=4)
+        ax.text(px + 0.25, py + 0.25, f"{request_id}_p", fontsize=9)
+        ax.scatter(dx, dy, marker="o", s=120, color="tab:red", edgecolor="black", zorder=4)
+        ax.text(dx, dy + 0.4, f"{request_id}_d", fontsize=9)
+        ax.plot([px, dx], [py, dy], linestyle=":", linewidth=1.0, color="gray", alpha=0.7, zorder=1)
+
+    route_colors = ["tab:green", "tab:purple", "tab:orange", "tab:brown", "tab:pink", "tab:cyan"]
+
+    def node_coord(node_id: str):
+        return instance.nodes[node_id].coord
+
+    initial_station_chosen = getattr(result, "initial_station_chosen", None)
+
+    for idx, trip_report in enumerate(result.trips):
+        color = route_colors[idx % len(route_colors)]
+        route = trip_report.route
+        bus_id = trip_report.bus_id
+        trip_index = trip_report.trip_index
+        if not route:
+            continue
+
+        coords = [node_coord(node_id) for node_id in route]
+        xs = [c[0] for c in coords]
+        ys = [c[1] for c in coords]
+        ax.plot(xs, ys, color=color, linewidth=2.5, alpha=0.95, zorder=3,
+                label=f"{bus_id} trip {trip_index}")
+
+        for i in range(len(coords) - 1):
+            x1, y1 = coords[i]
+            x2, y2 = coords[i + 1]
+            ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
+                        arrowprops=dict(arrowstyle="->", color=color, lw=2), zorder=3)
+
+        ex, ey = coords[-1]
+        ax.scatter(ex, ey, s=180, facecolors=color, edgecolors="black", linewidths=1.2, zorder=6)
+
+        if trip_report.charge_station_after_trip is not None:
+            station = trip_report.charge_station_after_trip
+            cx, cy = instance.station_coords[station]
+
+            next_trip_report = next(
+                (t for t in result.trips
+                 if t.bus_id == bus_id and t.trip_index == trip_index + 1 and t.route),
+                None,
+            )
+            if next_trip_report is not None:
+                nx, ny = node_coord(next_trip_report.route[0])
+                draw_arrow_link(cx, cy, nx, ny, color="black", lw=2.0, zorder=2)
+
+            draw_arrow_link(ex, ey, cx, cy, color="black", lw=2.0, zorder=2)
+
+    if initial_station_chosen:
+        for trip_report in result.trips:
+            if trip_report.trip_index != 1 or not trip_report.route:
+                continue
+            bus_id = trip_report.bus_id
+            station = initial_station_chosen.get(bus_id)
+            if station is None:
+                continue
+            sx, sy = instance.station_coords[station]
+            fx, fy = node_coord(trip_report.route[0])
+            draw_arrow_link(sx, sy, fx, fy, color="black", lw=2.0, zorder=2)
+
+    legend_handles = [
+        Line2D([0], [0], marker="s", color="w", label="Charging station",
+               markerfacecolor="gold", markeredgecolor="black", markersize=12),
+        Line2D([0], [0], marker="^", color="w", label="Pickup",
+               markerfacecolor="tab:blue", markeredgecolor="black", markersize=10),
+        Line2D([0], [0], marker="o", color="w", label="Dropoff",
+               markerfacecolor="tab:red", markeredgecolor="black", markersize=10),
+        Line2D([0], [0], color="black", lw=2, linestyle="-", label="Bus route / transfer link"),
+    ]
+    ax.legend(handles=legend_handles, loc="best", frameon=True)
+    ax.set_xlabel("X coordinate")
+    ax.set_ylabel("Y coordinate")
+    ax.grid(True, alpha=0.3)
+    ax.set_aspect("equal", adjustable="box")
+    fig.tight_layout()
+
+    output = FIGURES_DIR / f"{name}.png"
+    fig.savefig(output, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+    return output
 
 
 def main() -> int:
     data = load_comparison_data()
 
-    # Solve each scenario's cross-evaluation exactly once, then pass the cached
-    # result to both the JSON writer (inside _run_cross_evaluation) and the
-    # figure renderer.  This avoids the previous double-solve per figure call.
-    partial_result = _run_cross_evaluation("partial_recharge", requests=4)
-    deep_result = _run_cross_evaluation("deep_recharge", requests=5)
+    partial_instance, partial_result = _run_cross_evaluation("partial_recharge", requests=7)
+    deep_instance, deep_result = _run_cross_evaluation("deep_recharge", requests=7)
 
     outputs = [
         plot_charging_profiles(),
         plot_scenario_comparison(data),
         plot_partial_cross_evaluation(precomputed_result=partial_result),
         plot_deep_cross_evaluation(precomputed_result=deep_result),
+        plot_instance_map(partial_instance, partial_result.optimized_source, name="partial_instance_map"),
+        plot_instance_map(deep_instance, deep_result.optimized_source, name="deep_instance_map"),
     ]
     print("Generated figures:")
     for output in outputs:
