@@ -385,8 +385,8 @@ def main() -> int:
     T_total = max(p_segs[-1].t1 if p_segs else 0.0,
                   d_segs[-1].t1 if d_segs else 0.0) + 4.0
 
-    fps      = 24
-    duration = 12.0
+    fps      = 20
+    duration = 8.0
     n_frames = int(fps * duration)
 
     fig, (ax_p, ax_d) = plt.subplots(
@@ -414,13 +414,14 @@ def main() -> int:
     out_dir.mkdir(exist_ok=True)
     frames_dir = out_dir / "anim"
     if frames_dir.exists():
-        for old in frames_dir.glob("frame_*.png"):
+        for old in list(frames_dir.glob("frame_*.png")) + list(frames_dir.glob("frame_*.jpg")):
             old.unlink()
     frames_dir.mkdir(exist_ok=True)
 
     print(f"Rendering {n_frames} frames ({duration:.1f}s @ {fps}fps) "
           f"covering T={T_total:.1f} simulated minutes ...")
 
+    # Save as JPG (smaller PDF embed); render at modest DPI.
     saved_paths = []
     for i in range(n_frames):
         sim_t = (i / max(n_frames - 1, 1)) * T_total
@@ -428,10 +429,12 @@ def main() -> int:
                      sim_t, served_target_p, T_total)
         update_panel(d_inst, d_segs, d_events, d_art, d_trail,
                      sim_t, served_target_d, T_total)
-        path = frames_dir / f"frame_{i:03d}.png"
-        fig.savefig(path, dpi=110, facecolor=BG)
+        path = frames_dir / f"frame_{i:03d}.jpg"
+        fig.savefig(path, dpi=90, facecolor=BG,
+                    pil_kwargs={"quality": 85, "optimize": True,
+                                "progressive": True})
         saved_paths.append(path)
-        if (i + 1) % 24 == 0 or i == n_frames - 1:
+        if (i + 1) % 20 == 0 or i == n_frames - 1:
             print(f"  frame {i+1}/{n_frames}")
 
     plt.close(fig)
