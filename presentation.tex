@@ -409,18 +409,6 @@ The two charging assumptions disagree on whether the third trip is feasible at a
 \begin{frame}{Plan illustration}
 \begin{columns}[T,onlytextwidth]
 \column{0.48\textwidth}
-% \textbf{Both station-choice layers bind}
-% \begin{itemize}\itemsep2pt
-%   \item Dispatch from \texttt{depot} (\$0.48/kWh, time scale 1.08) for Trip~1.
-%   \item Recharge at \texttt{hub} (\$0.64/kWh, time scale 0.82) between trips.
-%   \item Hub's short time scale is worth its higher unit price because the binding constraint in deep recharge is \emph{time}, not \emph{cost}.
-% \end{itemize}
-
-% \textbf{Why this matters for the comparison}
-% \begin{itemize}\itemsep2pt
-%   \item Linear and nonlinear pick the \emph{same} stations.
-%   \item The 56.44 deep-recharge gap therefore isolates the charging-curve effect from station-choice noise.
-% \end{itemize}
 \centering
 \alert{Partial} recharge, \alert{linear} charging mode
 \includegraphics[width=\linewidth,  height=0.9\textheight,
@@ -431,8 +419,6 @@ The two charging assumptions disagree on whether the third trip is feasible at a
 \alert{Deep} recharge, \alert{linear} charging mode
 \includegraphics[width=\linewidth,  height=0.9\textheight,
   keepaspectratio]{figures/deep_instance_map.png}
-% \\[2pt]
-% {\scriptsize Deep-recharge spatial layout. Faded markers are dropped under nonlinear.}
 \end{columns}
 \end{frame}
 
