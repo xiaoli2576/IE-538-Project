@@ -354,7 +354,6 @@ Model results for the above three scenarios (\(|Q|=7,\,|R|=3,\,|K|=1\)) under li
         Deep recharge    & Nonlinear & 109.07 & 4 & 3 & 11.62 & 23.00 \\
         \bottomrule
     \end{tabular}
-    
     \label{tab:direct-comparison}
 \end{table}
 
@@ -371,7 +370,7 @@ In the \textbf{baseline} case under two charging functions, the bus serves all s
 In the \textbf{partial-recharge} case, model results under two charging assumptions have the same objective (\$194.23) with five requests being served. They have different charge times (17.15 vs.\ 14.04 minutes) for charging the same amount of energy of 25.10 kWh. At \(|Q|=7\), requests \(\{r_3,r_4\}\) with tight time windows and request \(r_5\) cannot all fit into the available trip under either model. The decision regarding which requests not to serve relies on the routing geometry. The scheduling plan under linear charging assumption is shown in Figure\ref{fig:instance-maps}(a). On the first trip, the vehicle serves requests \(\{r_1, r_2\}\), then it gets charged at the charging hub. It departs to make a second trip to serve request \({r_3}\), before it returns to the charging hub. Lastly, it serves requests \(\{r_5, r_6\}\).
 % Partial-recharge therefore stops being the headline at this scale: the moderate-recharge regime does not separate the two assumptions when the time windows are interior to a single trip slot.
 
-In the \textbf{deep-recharge} case, models under two charging functions generate different model results. Linear charging curve has an objective of \$165.51 by serving \(\{r_1,r_2,r_3,r_4,r_7\}\). This case is recharged by 35.81 kWh over 24.47 minutes and makes the third trip feasible to serve request \(r_7\). Nonlinear charging curve has a different plan that serves four requests \(\{r_1,r_2,r_4,r_5\}\) with an objective value of \$109.07. This bus receives 23.00 kWh of charge over 11.62 minutes. Compared to the linear charging curve, the nonlinear charging curve case cannot obtain enough energy in the same time windows, so it drops requests \(r_3,r_6,r_7\). Compared to the partial-recharge case and baseline case, where both models have the same plan, the two models in the deep-charging case have different plans of serving requests and thus require different charging times. The scheduling plan under linear charging assumption is shown in Figure\ref{fig:instance-maps}(b). It serves requests \(\{r_1, r_2\}\) on its first trip, requests \(\{r_3, r_4\}\) on its second trip, and requests \(\{\]\)
+In the \textbf{deep-recharge} case, models under two charging functions generate different model results. Linear charging curve has an objective of \$165.51 by serving \(\{r_1,r_2,r_3,r_4,r_7\}\). This case is recharged by 35.81 kWh over 24.47 minutes and makes the third trip feasible to serve request \(r_7\). Nonlinear charging curve has a different plan that serves four requests \(\{r_1,r_2,r_4,r_5\}\) with an objective value of \$109.07. This bus receives 23.00 kWh of charge over 11.62 minutes. Compared to the linear charging curve, the nonlinear charging curve case cannot obtain enough energy in the same time windows, so it drops requests \(r_3,r_6,r_7\). Compared to the partial-recharge case and baseline case, where both models have the same plan, the two models in the deep-charging case have different plans of serving requests and thus require different charging times. The scheduling plan under linear charging assumption is shown in Figure\ref{fig:instance-maps}(b). It serves requests \(\{r_1, r_2\}\) on its first trip, requests \(\{r_3, r_4\}\) on its second trip, and requests \(\{r_7\}\) on its third trip. It returns to the charging hub for recharging between trips. 
 
 \begin{figure}[H]
     \centering
@@ -415,11 +414,11 @@ In the \textbf{deep-recharge} case, models under two charging functions generate
 
 
 
-\subsection{Problem Size and Runtime}
+% \subsection{Problem Size and Runtime}
 
 Model size is dominated by the arc variables \(x_{kijr}\) and the first/last node indicators, which scale as \(|K|\,|N|^{2}|R|\) with \(|N|=2|Q|\) service nodes. Moving from \(|Q|=4,\,|R|=2\) to \(|Q|=7,\,|R|=3\) increases this dominant term by roughly 4.6\(\times\) per bus. With Gurobi 11 default settings, the single-bus configuration takes 1.8 seconds to solve for the baseline, 3.3-3.9 seconds for partial recharge, and 2.3-2.7 seconds for deep recharge. The linear and nonlinear modes share the same model size because each station carries the same number of breakpoints. Their run times are similar. 
 
-\subsection{Cross-Evaluation: Is the Linear-Optimal Plan Still Good Under Nonlinear Charging?}
+\subsection{Cross-Evaluation}
 \label{sec:cross-eval}
 
 We then test whether a plan optimized under the simplified linear assumption remains valid once the charging process is modeled more realistically as a nonlinear curve. The cross-evaluation has three stages: (i) solve for the solution under linear charging; (ii) use the solved plan (trip activations, routing arcs, station choices, first/last indicators) to re-solve charging variables (charging times and charging energy) under nonlinear charging; (iii) re-optimize to solve for the solution under nonlinear charging. The 
@@ -429,17 +428,19 @@ In the \textbf{partial-recharge} scenario (Figure~\ref{fig:partial-cross}), the 
 In the \textbf{deep-recharge} scenario (Figure~\ref{fig:deep-cross}), the linear-optimal plan takes 24.47 minutes to charge by 35.81 kWh at the hub station. The charging is taken in two inter-trip sessions, including 16.6 kWh over 11.35 min in the first session and 19.2 kWh over 13.12 min in the second session. For the same charge plan with the nonlinear curve at the same station, the vehicle can only receive energy of 31.55 kWh, a lower energy of 4.26 kWh (\(15.47\) vs.\ \(16.61\) kWh on the first recharge session and \(16.09\) vs.\ \(19.20\) kWh on the second recharge session). With the discrete plan fixed (trip activations, routing arcs, station choices, first/last indicators), the lower energy of 4.26 kWh causes restrictions on vehicle operation and leads to infeasibility under the nonlinear charging curve. When resolving the problem under the nonlinear charging curve, it gives an optimal solution of \$109.07 with a much smaller recharge total of 23.00 kWh over 11.62 minutes. The optimal value gap of \$56.44 between the linear charging case and the nonlinear charging case suggests that these two assumptions of charging curves can lead to different scheduling and charging plans. The simplified assumption of a linear charging curve can lead to a divergent result.  
 %; full per-trip numbers in \texttt{results/deep\_recharge\_infeasibility\_diagnostic.json
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/partial_recharge_cross_evaluation.png}
-    \caption{Cross-evaluation for the partial-recharge scenario at \(|Q|=7,\,|R|=3\). All three stages return the same plan; only the charge time differs (14.04 vs.\ 17.15 minutes for 25.10 kWh).}
+    \caption{Cross-evaluation for the partial-recharge scenario}
+    % at \(|Q|=7,\,|R|=3\). All three stages return the same plan; only the charge time differs (14.04 vs.\ 17.15 minutes for 25.10 kWh).}
     \label{fig:partial-cross}
 \end{figure}
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/deep_recharge_cross_evaluation.png}
-    \caption{Cross-evaluation for the deep-recharge scenario. The linear-optimal plan fails the feasibility check under the nonlinear curve (panel (a), middle column flagged \textsc{infeasible}); the honest nonlinear plan drops one served request and uses a much smaller recharge (panels (b)--(c)).}
+    \caption{Cross-evaluation for the deep-recharge scenario}
+    % The linear-optimal plan fails the feasibility check under the nonlinear curve (panel (a), middle column flagged \textsc{infeasible}); the honest nonlinear plan drops one served request and uses a much smaller recharge (panels (b)--(c)).
     \label{fig:deep-cross}
 \end{figure}
 
@@ -452,6 +453,29 @@ In the above model settings, we only consider one bus in the configuration. A na
 Results show that under the linear charging assumption, the model reaches an optimal value of \$300.22 by serving seven of the eight requests. One bus receives an 18.18 kWh inter-trip recharge to conduct a second trip for three requests. Under the nonlinear curve, the optimal solution serves seven requests with an optimal value of \$293.98. The cross-evaluation checks how the plan under a linear charging curve performs regarding charging under the nonlinear curve. It shows similar results that the plan under a linear curve is infeasible inside the same inter-trip window under the nonlinear curve. Re-optimization under a nonlinear curve spreads load across two buses with smaller per-trip recharges. The optimal plan serves seven requests with an optimal value of \$293.98. Compared to the single-bus configuration, the run times of the multi-bus configuration grow by roughly 1.6\(\times\) in arc variables and take 14-59 seconds to solve, depending on the scenarios.
 
 In both the single-bus (\(|K|=1,\,|R|=3\)) and the two-bus (\(|K|=2,\,|R|=2\)) configurations, the optimal values under the nonlinear curve are lower than the optimal values under the linear curve. It might be because the capacity in terms of available buses and trip slots is limited. It forces a substantial inter-trip recharge into the slow tail of the nonlinear charging curve. We expect that further expanding the capacity, such as adding more buses, more trip slots, or both, would bring a change. In this scenario, each trip can become shorter, and each inter-trip recharge can stay inside the early segment of the charging curves, where the charging speed of the nonlinear charging curve is faster than that of a linear charging curve. 
+
+\begin{table}[H]
+    \centering
+    \caption{Model results for three scenarios under two charging functions}
+    \small
+    % \setlength{\tabcolsep}{2pt}
+    \begin{tabular}{llrrrrr}
+        \toprule
+        Scenario & Mode & Objective (\$) & \makecell{Served\\requests} & Trips &\makecell{Charge Time\\(minute)} & \makecell{Charge Energy\\ (kWh)}\\
+        \midrule
+        Baseline (multi-bus)        & Linear    & 305.64& 7 & 2/bus& 15.89& 23.26\\
+        Baseline (multi-bus)        & Nonlinear & 305.64& 7 & 2/bus& 17.49& 23.26\\
+        Partial recharge (multi-bus) & Linear    & 305.64& 7 
+& 2/bus& 15.89& 23.26\\
+        Partial recharge (multi-bus) & Nonlinear & 305.64& 7 & 2/bus& 17.49& 23.26\\
+        Deep recharge (multi-bus)   & Linear    & \textbf{300.22}& 7 
+& 2/bus& 17.35& 25.39\\
+        Deep recharge (multi-bus)   & Nonlinear & \textbf{293.98}& 7 & 2/bus& 16.45& 27.84\\
+        \bottomrule
+    \end{tabular}
+    \label{tab:direct-comparison (multi-bus)}
+\end{table}
+
 
 
 % The pattern we observe in both the single-bus (\(|K|=1,\,|R|=3\)) and the two-bus (\(|K|=2,\,|R|=2\)) configurations is consistent: the asymmetry shows up when capacity is tight enough that fitting all promised requests forces a substantial inter-trip recharge into the slow tail of the taper. We expect that further loosening capacity (more buses, more trip slots, or both) would dilute this regime, since each trip becomes shorter and each inter-trip recharge stays inside the early segment where the two charging assumptions barely disagree -- but we have not run a saved sweep over those configurations and do not claim a quantitative boundary here.
