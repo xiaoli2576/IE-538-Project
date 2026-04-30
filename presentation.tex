@@ -165,7 +165,7 @@ and Inter-Trip Charging with Nonlinear Charging Profiles}\\[12pt]
   \item Most prior work assumes a \alert{constant charging rate} (Jiang et al., 2026).
   \item Real charging process is \alert{tapering}: fast -> slow.
   % Charging tapering is the automatic reduction of EV charging speed as the battery nears full capacity
-\end{itemize} \\[25pt]
+\end{itemize} 
 
 \textbf{Research question}
 \begin{block}{}
@@ -237,7 +237,7 @@ and Inter-Trip Charging with Nonlinear Charging Profiles}\\[12pt]
   % \item[$\bullet$] Initial dispatch station; inter-trip station choice.
   \item Charging duration \& acquired energy at each station visit.
 \end{itemize}
-\vspace{5pt}
+% \vspace{5pt}
 \textbf{Objective} \\[2pt]
 % \vspace{-4pt}
 % \begin{align*}
@@ -249,22 +249,81 @@ and Inter-Trip Charging with Nonlinear Charging Profiles}\\[12pt]
 %   - \sum_{k,s,r} C_{e,s}\, E_{ksr}.
 % \end{align*}
 Maximize operating profit: revenue - penalty for not serving requests - bus operational cost - charging cost
+\begin{columns}[c,onlytextwidth]
+\column{1\textwidth}
+\centering
+\includegraphics[width=0.5\linewidth, trim=0cm 9cm 0cm 0cm, clip]{Model1.png}
+\end{columns}
 
-\vspace{5pt}
-\textbf{Constraints}
+% \vspace{5pt}
+\begin{columns}[c,onlytextwidth]
+\column{0.30\textwidth}
+\centering
 \begin{itemize}\itemsep1pt
-  \item Request-to-trip assignment, bus-to-trip assignment, etc.
-  % , trip activation, subsequent-trip ordering.
+  \item \textbf{Constraints}: Request-to-trip assignment, bus-to-trip assignment, etc.
+  %, trip activation, subsequent-trip ordering.
   % \item Arc-flow routing with in/out degree, first/last node indicators.
-  \item Flow conservation
-  \item Time-window constraint
-  \item Energy constraint, inter-trip charging constraint
+  % \item Flow conservation
+  % \item Time-window constraint
+  % \item Energy constraint, inter-trip charging constraint
   % \item Passenger load propagation bounded by $C_b$.
   % \item Battery propagation within trips; inter-trip transitions via station.
   % \item Charging coupling $E_{ksr} = \mathrm{PWL}_s(\theta_{ksr})$ with station-off indicators.
   % \item Symmetry breaking across identical buses.
 \end{itemize}
+
+\column{0.04\textwidth}
+\makebox[0pt][l]{%
+  \hspace*{-1.8cm}%
+  $\left\{
+  \begin{array}{c}
+  \vphantom{\rule{0pt}{0.35\textheight}}
+  \end{array}
+  \right.$%
+}
+
+\column{0.4\textwidth}
+\raggedright
+\hspace*{-4cm}
+\includegraphics[width=1\linewidth, trim=4cm 0cm 0cm 2.5cm, clip]{Model1.png}
+
+\end{columns}
 \end{frame}
+
+
+
+% ================= MODEL OVERVIEW =================
+\begin{frame}{3. Modeling Approach}
+\vspace*{-0.5cm}
+\begin{columns}[t,onlytextwidth]
+\column{0.50\textwidth}
+\centering
+% \begin{itemize}\itemsep1pt
+  % \item \textbf{Constraints}: Request-to-trip assignment, bus-to-trip assignment, etc.
+  %, trip activation, subsequent-trip ordering.
+  % \item Arc-flow routing with in/out degree, first/last node indicators.
+  % \item Flow conservation
+  % \item Time-window constraint
+  % \item Energy constraint, inter-trip charging constraint
+  % \item Passenger load propagation bounded by $C_b$.
+  % \item Battery propagation within trips; inter-trip transitions via station.
+  % \item Charging coupling $E_{ksr} = \mathrm{PWL}_s(\theta_{ksr})$ with station-off indicators.
+  % \item Symmetry breaking across identical buses.
+% \end{itemize}
+\item Flow conservation
+\includegraphics[width=0.9\linewidth, trim=3cm 2.5cm 0cm 0cm, clip]{Model2.png}
+\item Time-window constraint
+\includegraphics[width=1\linewidth, trim=3cm 0cm 0cm 5.6cm, clip]{Model2.png}
+\includegraphics[width=1\linewidth, trim=0cm 10.7cm 0cm 0cm, clip]{Model3.png}
+
+\column{0.5\textwidth}
+\centering
+\item Energy constraint, inter-trip charging constraint
+\includegraphics[width=1\linewidth, trim=0cm 0cm 0cm 7.3cm, clip]{Model3.png}
+
+\end{columns}
+\end{frame}
+
 
 % ================= CHARGING PWL =================
 \begin{frame}{3. Modeling Approach}
@@ -328,8 +387,6 @@ Different charging speed of stations: \textbf{\texttt{Charging hub 1}: 0.82 (fas
   \item Evaluate the solved plan (route, station, request-trip assignment) under nonlinear charging 
   \item Re-optimize under nonlinear charging
 \end{itemize}
-
-\textbf{Multi-bus scenario}: re-run deep recharge scenario with 2 buses, 2 trip slots/bus, 8 requests.
 \end{frame}
 
 % ================= RESULTS TABLE =================
@@ -525,35 +582,14 @@ Cross-evaluation: solution under linear charging curve is infeasible under nonli
 
 % ================= TAKEAWAY =================
 \begin{frame}{5. Discussions \& Conclusions - Findings}
-% \begin{block}{Operational implication}
-% \end{block}
-
-% \vspace{4pt}
-% \textbf{What the experiments showed}
 \begin{itemize}\itemsep2pt
-  % \item A one-stage integrated MIP handles multi-station charging, station-specific speed \& price, dispatch-station decisions, and a tapering charging profile -- without the bilinear $E = p\,\theta$ term, by absorbing $p$ into a station-specific time-axis scaling of a shared PWL.
+  \item The nonlinear mode makes a difference when requests are dense and time windows are tight.
   \item Baseline charges \emph{longer} under nonlinear (41.27 vs 24.57 min for 35.95 kWh) because the demand reaches the slow tail of the nonlinear charging curve. \textbf{Tapering charging is not uniformly faster}.
-  \item \textbf{Single-bus, $|K|=1$, $|R|=3$, $|Q|=7$, deep recharge}: Linear obj 165.51 (5 served) vs nonlinear 109.07 (4 served): \alert{\textbf{gap 56.44, and linear's plan is infeasible under nonlinear assumption}}.
-  \item \textbf{Multi-bus, $|K|=2$, $|R|=2$, $|Q|=8$, deep recharge}: Similar finding: linear 300.22 vs nonlinear 293.98, \alert{\textbf{linear's plan is still infeasible under nonlinear assumption}}.
-  \item The linear charging assumption is safe when there is enough time between requests and \textbf{misleading when requests' pickup times are close}. In this case, it produces a plan that the real battery with tapering charging cannot execute.
-  % \item \textbf{Three buses, same instance.} The asymmetry collapses --- capacity is too loose for the deep-recharge regime to bind.
+  \item \textbf{Deep recharge scenarios (single- and multi-bus)}: Linear vs nonlinear show significant gaps --- e.g., single-bus: 165.51 (5 served) vs 109.07 (4 served), and multi-bus: 300.22 vs 293.98. \alert{\textbf{In both cases, the linear solution becomes infeasible under the nonlinear charging assumption}}.
+  \item The linear charging assumption is safe when there is enough time between requests but \textbf{misleading when pickup windows are tight}, as it may produce plans that a real battery with tapering charging cannot execute.
 \end{itemize}
 \end{frame}
 
-% % ================= CONTRIBUTIONS =================
-% \begin{frame}{Contributions}
-% \begin{enumerate}\itemsep4pt
-%   \item \textbf{Integrated one-stage MIP}: request selection, trip sequencing, battery propagation, and inter-trip charging solved jointly (vs.\ the two-stage heuristic in Jiang et al., 2026).
-%   \item \textbf{Multi-station charging} with per-station speed \emph{and} per-station price; and a \textbf{dispatch-station decision variable} for the first trip.
-%   \item \textbf{Tractable nonlinear charging}: bilinear $E = p\,\theta$ is reformulated as a piecewise-linear map $\theta \mapsto E$ via \texttt{addGenConstrPWL}; 
-%   % station $p$ is absorbed into a time-axis scaling of the PWL breakpoints.
-%   % \item \textbf{Indicator-guarded coupling}: station-off $\Rightarrow$ charge time / energy $=0$ using Gurobi \texttt{addGenConstrIndicator} instead of a loose big-$M$.
-%   \item \textbf{Symmetric cross-evaluation}: optimize under one charging model, re-evaluate the fixed discrete plan under the other. 
-%   % Both directions tested.
-% \end{enumerate}
-% \end{frame}
-
-% ================= LIMITATIONS + NEXT =================
 \begin{frame}{5. Discussions \& Conclusions - Limitations \& Next Steps}
 \textbf{Limitations}
 \begin{itemize}\itemsep2pt
