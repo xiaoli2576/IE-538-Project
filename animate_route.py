@@ -348,34 +348,28 @@ def main() -> int:
     print("Solving deep scenario ...")
     d_inst, d_x = _run_cross_evaluation("deep_recharge", requests=7)
 
-    p_res = p_x.optimized_source
-    d_res = d_x.optimized_source
+    # Render the *nonlinear* optimum plan in each panel — that is the plan
+    # actually deployed under the realistic charging physics, so the served
+    # counts match the project's headline result (partial 5 vs deep 4).
+    p_res = p_x.optimized_target
+    d_res = d_x.optimized_target
 
-    # In-plan = requests the linear optimum actually visits
     p_in_plan = set(p_res.served_requests)
     d_in_plan = set(d_res.served_requests)
     p_out = set(p_inst.requests) - p_in_plan
     d_out = set(d_inst.requests) - d_in_plan
 
-    # Verdict (does the linear plan survive a nonlinear replay?)
-    p_replay = set(p_x.fixed_plan_in_target.served_requests)
-    d_replay = set(d_x.fixed_plan_in_target.served_requests)
-    p_lost = p_in_plan - p_replay
-    d_lost = d_in_plan - d_replay
-
-    if not p_lost:
-        p_verdict = f"NONLINEAR REPLAY: {len(p_replay)}/{len(p_in_plan)}  feasible"
-        p_verdict_color = SERVED_LIT
-    else:
-        p_verdict = f"NONLINEAR REPLAY: {len(p_replay)}/{len(p_in_plan)}  ({len(p_lost)} dropped)"
-        p_verdict_color = "#ffb84d"
-
-    if not d_lost:
-        d_verdict = f"NONLINEAR REPLAY: {len(d_replay)}/{len(d_in_plan)}  feasible"
-        d_verdict_color = SERVED_LIT
-    else:
-        d_verdict = f"NONLINEAR REPLAY: {len(d_replay)}/{len(d_in_plan)}  INFEASIBLE"
+    n_total = len(p_inst.requests)
+    p_verdict = f"NONLINEAR OPTIMUM:  {len(p_in_plan)}/{n_total} served"
+    p_verdict_color = SERVED_LIT
+    gap = len(p_in_plan) - len(d_in_plan)
+    if gap > 0:
+        d_verdict = (f"NONLINEAR OPTIMUM:  {len(d_in_plan)}/{n_total} served"
+                     f"   (-{gap} vs partial)")
         d_verdict_color = RED
+    else:
+        d_verdict = f"NONLINEAR OPTIMUM:  {len(d_in_plan)}/{n_total} served"
+        d_verdict_color = SERVED_LIT
 
     p_segs = build_timeline(p_inst, p_res)
     d_segs = build_timeline(d_inst, d_res)
@@ -385,16 +379,15 @@ def main() -> int:
     T_total = max(p_segs[-1].t1 if p_segs else 0.0,
                   d_segs[-1].t1 if d_segs else 0.0) + 4.0
 
-    fps      = 20
-    duration = 8.0
-    n_frames = int(fps * duration)
+    fps      = 24
+    n_frames = 288        # 12.0s @ 24 fps; matches \animategraphics{24}{...}{000}{287}
 
     fig, (ax_p, ax_d) = plt.subplots(
         1, 2, figsize=(13, 8.5), facecolor=BG,
         gridspec_kw={"wspace": 0.12},
     )
     plt.subplots_adjust(left=0.05, right=0.97, top=0.92, bottom=0.06)
-    fig.suptitle("Linear-mode optimum  ·  Partial vs Deep recharge",
+    fig.suptitle("Nonlinear-mode optimum  ·  Partial vs Deep recharge",
                  color=TEXT, fontsize=16, weight="bold", y=0.985)
 
     p_art = setup_panel(ax_p, p_inst, p_out,
@@ -418,6 +411,7 @@ def main() -> int:
             old.unlink()
     frames_dir.mkdir(exist_ok=True)
 
+    duration = n_frames / fps
     print(f"Rendering {n_frames} frames ({duration:.1f}s @ {fps}fps) "
           f"covering T={T_total:.1f} simulated minutes ...")
 
