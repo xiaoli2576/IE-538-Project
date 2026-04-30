@@ -271,9 +271,10 @@ def update_panel(inst, segs, events, art, trail_buf, sim_t, served_target,
     art["halo"].set_data([x], [y])
     art["halo"].set_color(color)
 
-    # Persistent comet trail: always append, cap at large buffer
+    # Persistent comet trail: always append, cap > total frame count so the
+    # full route stays visible end-to-end (no late-stage trail erosion).
     trail_buf.append((x, y, color))
-    if len(trail_buf) > 240:
+    if len(trail_buf) > 320:
         trail_buf.pop(0)
 
     if len(trail_buf) > 1:
@@ -376,14 +377,13 @@ def main() -> int:
     p_events = build_arrival_events(p_inst, p_segs)
     d_events = build_arrival_events(d_inst, d_segs)
 
-    # Each panel maps its own [0, T_panel + tail] onto the full frame range,
-    # so partial and deep both finish on the LAST frame — no mid-animation
-    # freeze on whichever route happens to be shorter.
+    # Both panels share one sim_t axis (same simulated-min per real-sec
+    # pace), so the clocks always agree.  Deep finishes earlier and sits at
+    # "complete" while partial wraps up — kept brief by a small post-finish
+    # tail so it does not feel like a freeze.
     p_T_route = p_segs[-1].t1 if p_segs else 0.0
     d_T_route = d_segs[-1].t1 if d_segs else 0.0
-    tail      = 3.0          # post-finish dwell so the verdict can fade in
-    p_T_total = p_T_route + tail
-    d_T_total = d_T_route + tail
+    T_total   = max(p_T_route, d_T_route) + 2.5
 
     fps      = 24
     n_frames = 288        # 12.0s @ 24 fps; matches \animategraphics{24}{...}{000}{287}
@@ -419,19 +419,17 @@ def main() -> int:
 
     duration = n_frames / fps
     print(f"Rendering {n_frames} frames ({duration:.1f}s @ {fps}fps); "
-          f"partial T={p_T_route:.1f}m, deep T={d_T_route:.1f}m "
-          f"(each spans the full 12s).")
+          f"shared T_total={T_total:.1f}m  "
+          f"(partial route {p_T_route:.1f}m, deep route {d_T_route:.1f}m).")
 
     # Save as JPG (smaller PDF embed); render at modest DPI.
     saved_paths = []
     for i in range(n_frames):
-        progress = i / max(n_frames - 1, 1)
-        p_sim_t = progress * p_T_total
-        d_sim_t = progress * d_T_total
+        sim_t = (i / max(n_frames - 1, 1)) * T_total
         update_panel(p_inst, p_segs, p_events, p_art, p_trail,
-                     p_sim_t, served_target_p, p_T_total)
+                     sim_t, served_target_p, T_total)
         update_panel(d_inst, d_segs, d_events, d_art, d_trail,
-                     d_sim_t, served_target_d, d_T_total)
+                     sim_t, served_target_d, T_total)
         path = frames_dir / f"frame_{i:03d}.jpg"
         fig.savefig(path, dpi=90, facecolor=BG,
                     pil_kwargs={"quality": 85, "optimize": True,
