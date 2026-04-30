@@ -18,7 +18,7 @@
   },
   "fixed_plan_in_target": {
     "status": "OPTIMAL",
-    "objective_value": 194.23000000000002,
+    "objective_value": 194.23000000000005,
     "served_requests": [
       "r1",
       "r2",
@@ -27,8 +27,8 @@
       "r6"
     ],
     "trip_count": 3,
-    "total_charge_time": 14.042499999999993,
-    "total_charge_energy": 25.1
+    "total_charge_time": 14.04249999999999,
+    "total_charge_energy": 25.099999999999987
   },
   "optimized_target": {
     "status": "OPTIMAL",
